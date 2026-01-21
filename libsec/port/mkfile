@@ -24,8 +24,6 @@ CFILES = des.c desmodes.c desECB.c desCBC.c des3ECB.c des3CBC.c\
         dsagen.c dsaalloc.c dsaprivtopub.c dsasign.c dsaverify.c \
         thumb.c readcert.c \
         aes_xts.c  \
-        ecc.c\
-        jacobian.c\
         ripemd.c\
         dh.c\
         curve25519.c\
@@ -35,9 +33,6 @@ CFILES = des.c desmodes.c desECB.c desCBC.c des3ECB.c des3CBC.c\
         hkdf.c\
         ccpoly.c\
         tsmemcmp.c\
-        secp256r1.c\
-        secp384r1.c\
-        secp256k1.c\
 	idea.c\
 
 

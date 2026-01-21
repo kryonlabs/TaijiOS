@@ -13,7 +13,14 @@ enum {
 typedef struct CNfield CNfield;
 struct CNfield
 {
-	Mfield;	
+	struct {
+		int	sign;
+		int	size;
+		int	top;
+		mpdigit	*p;
+		char	flags;
+	};
+	int	(*reduce)(Mfield*, mpint*, mpint*);
 
 	mpint	m[1];
 
@@ -100,10 +107,11 @@ cnfield(mpint *N)
 		goto out;
 	f->s = s;
 	f->c = C->p[0];
-	f->m->size = M->top;
-	f->m->p = (mpdigit*)&f[1];
-	mpassign(M, f->m);
-	mpassign(N, f);
+	f->size = M->top;
+	f->p = (mpdigit*)&f[1];
+	f->sign = M->sign;
+	f->top = M->top;
+	memcpy(f->p, M->p, M->top*Dbytes);
 	f->reduce = cnreduce;
 	f->flags |= MPfield;
 out:

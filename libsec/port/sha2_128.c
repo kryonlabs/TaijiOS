@@ -1,8 +1,7 @@
 /*
  * sha2 128-bit
  */
-#include <u.h>
-#include <libc.h>
+#include "os.h"
 #include "libsec.h"
 
 static void encode64(uchar*, u64int*, u32);

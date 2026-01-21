@@ -1,3 +1,19 @@
+# LimboOS - Modern Inferno OS Fork
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
+
+# Nix build artifacts
+result*
+.darwin/
+.nix-shell-check/
+
 # object files, libraries, etc
 *.[8qkv5967o]
 *.obj

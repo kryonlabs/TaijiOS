@@ -8,3 +8,4 @@ TARGFILES=\
 	getwd-posix.$O\
 	sbrk-posix.$O\
 	isnan-posix.$O\
+	mallocz.$O\

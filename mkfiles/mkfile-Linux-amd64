@@ -11,18 +11,24 @@ ARFLAGS=	ruvs
 AS=		cc -c 
 ASFLAGS=
 
-CC=		cc -c 
+CC=		gcc -c
 CFLAGS=		-g\
-		-O\
+		-O2\
+		-std=c11\
+		-fPIC\
 		-fno-strict-aliasing\
 		-fno-aggressive-loop-optimizations\
-		-Wuninitialized -Wunused-variable -Wreturn-type -Wimplicit\
+		-Wno-implicit-function-declaration\
+		-Wno-incompatible-pointer-types\
+		-Wno-unused-variable\
 		-I$ROOT/Linux/amd64/include\
 		-I$ROOT/include\
-		-DLINUX_AMD64
+		-DLINUX_AMD64\
+		-D_GNU_SOURCE\
+		-D_DEFAULT_SOURCE
 
 ANSICPP=
-LD=		cc 
+LD=		gcc
 LDFLAGS=
 
 SYSLIBS=

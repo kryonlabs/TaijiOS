@@ -176,11 +176,17 @@ typedef struct Mfield	Mfield;
 
 struct Mfield
 {
-	mpint;
+	struct {
+		int	sign;
+		int	size;
+		int	top;
+		mpdigit	*p;
+		char	flags;
+	};
 	int	(*reduce)(Mfield*, mpint*, mpint*);
 };
 
-mpint *mpfield(mpint*);
+Mfield *mpfield(mpint*);
 
 Mfield *gmfield(mpint*);
 Mfield *cnfield(mpint*);

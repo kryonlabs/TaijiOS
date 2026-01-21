@@ -2,6 +2,7 @@
 #include "isa.h"
 #include "interp.h"
 #include "raise.h"
+#include "kernel.h"
 #include <pool.h>
 
 static int debug = 0;

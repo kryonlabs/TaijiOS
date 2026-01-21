@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+
+# Build script for 9ferno on NixOS
+# This script builds the Inferno OS and emu
+
+set -e
+
+echo "=== Building 9ferno ==="
+
+# Get the root directory
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+# Source mkconfig to get paths
+if [ ! -f "mkconfig" ]; then
+    echo "Error: mkconfig not found. Run ./scripts/configure first"
+    exit 1
+fi
+
+# Source mkconfig (grep to avoid Plan9 reference error)
+if grep -q 'SYSTARG=Plan9' mkconfig; then
+    # This is Plan9, skip
+    :
+else
+    . ./mkconfig
+fi
+
+echo "Build configuration:"
+echo "  ROOT: $ROOT"
+echo "  SYSTARG: $SYSTARG"
+echo "  OBJTYPE: $OBJTYPE"
+echo "  OBJDIR: $OBJDIR"
+echo ""
+
+# Create build directories
+echo "Step 1: Creating directories..."
+PLAT="$ROOT/$OBJDIR"
+mkdir -p "$PLAT/lib"
+mkdir -p "$PLAT/bin"
+mkdir -p "$OBJDIR/lib"
+mkdir -p "$OBJDIR/bin"
+echo "Done."
+echo ""
+
+# Build mk (the build tool)
+echo "Step 2: Building mk (build tool)..."
+if [ ! -f "$OBJDIR/bin/mk" ]; then
+    # Determine architecture flags
+    if [ "$OBJTYPE" = "amd64" ]; then
+        # Use 64-bit flags for amd64
+        CC="gcc -m64 -c -I$PLAT/include -I$ROOT/include -I$ROOT/utils/include -D_GNU_SOURCE -D_DEFAULT_SOURCE -Wno-implicit-function-declaration"
+        LD="gcc -m64"
+    else
+        # Use 32-bit flags for 386 and others
+        CC="gcc -m32 -c -I$PLAT/include -I$ROOT/include -I$ROOT/utils/include -D_GNU_SOURCE -D_DEFAULT_SOURCE -Wno-implicit-function-declaration"
+        LD="gcc -m32"
+    fi
+
+    # Build libregexp
+    cd "$ROOT/utils/libregexp"
+    $CC regaux.c regcomp.c regerror.c regexec.c regsub.c rregexec.c rregsub.c
+    ar crvs "$PLAT/lib/libregexp.a" *.o
+    rm -f *.o
+
+    # Build libbio
+    cd "$ROOT/libbio"
+    $CC *.c
+    ar crvs "$PLAT/lib/libbio.a" *.o
+    rm -f *.o
+
+    # Build lib9
+    cd "$ROOT/lib9"
+    $CC dirstat-posix.c rerrstr.c errstr-posix.c getuser-posix.c \
+       charstod.c cleanname.c create.c dirwstat.c *print*.c *fmt*.c \
+       exits.c getfields.c pow10.c print.c qsort.c rune.c runestrlen.c \
+       seek.c strdup.c strtoll.c utflen.c utfrrune.c utfrune.c utf*.c *str*cpy*.c
+    ar crvs "$PLAT/lib/lib9.a" *.o
+    rm -f *.o
+
+    # Build mk
+    cd "$ROOT/utils/mk"
+    $CC Posix.c sh.c arc.c archive.c bufblock.c env.c file.c graph.c \
+        job.c lex.c main.c match.c mk.c parse.c recipe.c rule.c run.c \
+        shprint.c symtab.c var.c varsub.c word.c
+    $LD -o mk *.o "$PLAT/lib/libregexp.a" "$PLAT/lib/libbio.a" "$PLAT/lib/lib9.a"
+    cp mk "$PLAT/bin/"
+
+    # Clean up object files
+    cd "$ROOT"
+    find utils libbio lib9 -name "*.o" -delete
+
+    echo "mk built successfully."
+else
+    echo "mk already built, skipping..."
+fi
+echo ""
+
+# Add mk to PATH
+export PATH="$ROOT/$OBJDIR/bin:$PATH"
+
+# Clean previous builds
+echo "Step 3: Cleaning previous builds..."
+if command -v mk &> /dev/null; then
+    mk nuke 2>/dev/null || echo "Nothing to clean"
+fi
+echo "Done."
+echo ""
+
+# Build Inferno
+echo "Step 4: Building Inferno (this will take a while)..."
+if command -v mk &> /dev/null; then
+    mk install
+    echo "Build complete!"
+else
+    echo "Error: mk command not found in $OBJDIR/bin"
+    exit 1
+fi
+echo ""
+
+# Check if emu was built
+EMU_PATH="$ROOT/$OBJDIR/bin/emu"
+if [ -f "$EMU_PATH" ]; then
+    echo "=== Build successful! ==="
+    echo "emu executable: $EMU_PATH"
+    echo ""
+    echo "To run Inferno, use:"
+    echo "  ./scripts/run"
+    echo "  or directly: $EMU_PATH"
+else
+    echo "Warning: emu not found at $EMU_PATH"
+    echo "The build may have encountered issues."
+    exit 1
+fi

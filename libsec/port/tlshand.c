@@ -1,5 +1,4 @@
-#include <u.h>
-#include <libc.h>
+#include "os.h"
 #include <auth.h>
 #include "../include/mp.h"
 #include "libsec.h"

@@ -36,7 +36,8 @@ canlock(Lock *l)
 void
 unlock(Lock *l)
 {
-	coherence();
+	if(coherence != nil)
+		coherence();
 	l->val = 0;
 }
 

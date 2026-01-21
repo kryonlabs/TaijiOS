@@ -1,5 +1,4 @@
-#include <u.h>
-#include <libc.h>
+#include "os.h"
 #include "../include/mp.h"
 #include "libsec.h"
 
@@ -2448,7 +2447,7 @@ mkutc(long t)
 {
 	Elem e;
 	char utc[50];
-	Tm *tm = gmtime(t);
+	Tm *tm = gmtime((time_t*)&t);
 
 	e.tag.class = Universal;
 	e.tag.num = UTCTime;

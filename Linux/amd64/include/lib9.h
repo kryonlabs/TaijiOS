@@ -15,6 +15,9 @@
 #endif
 #include <features.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #define sync __os_sync
@@ -46,7 +49,6 @@ typedef struct Proc Proc;
 typedef unsigned char	uchar;
 typedef signed char	schar;
 typedef unsigned int Rune;
-typedef unsigned long	usize;
 typedef long long int	vlong;
 typedef unsigned long long int	uvlong;
 typedef unsigned int u32;
@@ -146,19 +148,12 @@ extern	Rune	totitlerune(Rune);
 extern	Rune	toupperrune(Rune);
 extern	int	isalpharune(Rune);
 extern	int	islowerrune(Rune);
-extern	int	isspacerune(Rune);
-extern	int	istitlerune(Rune);
-extern	int	isupperrune(Rune);
 
 /*
- * malloc
+ * malloc - standard functions from system, Plan 9 extensions only
  */
-extern	void*	malloc(usize);
-extern	void*	mallocz(usize, int);
-extern	void	free(void*);
-extern	usize	msize(void*);
-extern	void*	calloc(usize, usize);
-extern	void*	realloc(void*, usize);
+extern	void*	mallocz(size_t, int);
+extern	size_t	msize(void*);
 extern	void	setmalloctag(void*, uintptr);
 extern	void	setrealloctag(void*, uintptr);
 extern	uintptr	getmalloctag(void*);
@@ -519,3 +514,16 @@ extern	void	setfcr(u32);
 extern	void	setfsr(u32);
 extern	u32	getfcr(void);
 extern	u32	getfsr(void);
+
+/* FPdbleword for mptod.c */
+#ifndef FPdbleword_defined
+#define FPdbleword_defined
+typedef union FPdbleword FPdbleword;
+union FPdbleword {
+	double	x;
+	struct {	
+		uint lo;
+		uint hi;
+	};
+};
+#endif

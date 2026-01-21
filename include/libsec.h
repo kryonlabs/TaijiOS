@@ -49,9 +49,19 @@ void	aes_xts_decrypt(AESstate *tweak, AESstate *ecb, uvlong sectorNumber, uchar 
 typedef struct AESGCMstate AESGCMstate;
 struct AESGCMstate
 {
-	AESstate;
+	struct {
+		u32	setup;
+		u32	offset;
+		int	rounds;
+		int	keybytes;
+		void	*ekey;
+		void	*dkey;
+		uchar	key[AESmaxkey];
+		uchar	ivec[AESbsize];
+		uchar	storage[512];
+	};
 
-	u32	varH[4];	/* renamed H to varH to avoid collision with the H macro used by inferno */
+	u32	varH[4];
 	u32	M[16][256][4];
 };
 
@@ -525,7 +535,12 @@ typedef struct ECpoint{
 
 typedef ECpoint ECpub;
 typedef struct ECpriv{
-	ECpoint;
+	struct {
+		int inf;
+		mpint *x;
+		mpint *y;
+		mpint *z;
+	};
 	mpint *d;
 } ECpriv;
 

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# Run script for 9ferno emu on NixOS
+# This script launches the Inferno OS emulator
+
+set -e
+
+echo "=== Starting Inferno OS (9ferno) ==="
+
+# Get the root directory
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+# Source mkconfig to get paths
+if [ ! -f "mkconfig" ]; then
+    echo "Error: mkconfig not found. Run ./scripts/configure first"
+    exit 1
+fi
+
+# Source mkconfig (grep to avoid Plan9 reference error)
+if grep -q 'SYSTARG=Plan9' mkconfig; then
+    # This is Plan9, skip
+    :
+else
+    . ./mkconfig
+fi
+
+EMU_PATH="$ROOT/$OBJDIR/bin/$CONF"
+
+# Check if emu exists
+if [ ! -f "$EMU_PATH" ]; then
+    echo "Error: emu not found at $EMU_PATH"
+    echo ""
+    echo "Please build first by running: ./scripts/build"
+    exit 1
+fi
+
+echo "Starting: $EMU_PATH"
+echo "Root directory: $ROOT"
+echo ""
+echo "To exit Inferno, type: exit"
+echo ""
+
+# Run emu with the Inferno root as the working directory
+# The -r option sets the root of the Inferno filesystem
+exec "$EMU_PATH" -r "$ROOT"

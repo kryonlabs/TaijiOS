@@ -1,4 +1,4 @@
-$AWK '
+${AWK-awk} '
 BEGIN{
 		if (ARGC < 2)
 			exit "usage";

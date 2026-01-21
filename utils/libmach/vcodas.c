@@ -274,7 +274,7 @@ static Opcode fopcodes[64] = {
 	"c.ngt.%f",	mipscofpc,
 };
 
-static char fsub[16] = {
+static char fsub_fmt[16] = {
 	's', 'd', 'e', 'q', 'w', '?', '?', '?',
 	'?', '?', '?', '?', '?', '?', '?', '?'
 };
@@ -387,7 +387,7 @@ format(char *mnemonic, Instr *i, char *f)
 			break;
 
 		case 'f':
-			*i->curr++ = fsub[i->rs & 0x0F];
+			*i->curr++ = fsub_fmt[i->rs & 0x0F];
 			break;
 
 		case '\0':

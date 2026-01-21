@@ -14,7 +14,14 @@ enum {
 typedef struct GMfield GMfield;
 struct GMfield
 {
-	Mfield;	
+	struct {
+		int	sign;
+		int	size;
+		int	top;
+		mpdigit	*p;
+		char	flags;
+	};
+	int	(*reduce)(Mfield*, mpint*, mpint*);
 
 	mpint	m2[1];
 
@@ -122,7 +129,11 @@ gmfield(mpint *N)
 	g->m2->p = (mpdigit*)&g[1];
 	g->m2->size = d*2+1;
 	mpmul(N, N, g->m2);
-	mpassign(N, g);
+	g->sign = N->sign;
+	g->size = N->size;
+	g->top = N->top;
+	g->p = N->p;
+	g->flags = N->flags;
 	g->reduce = gmreduce;
 	g->flags |= MPfield;
 

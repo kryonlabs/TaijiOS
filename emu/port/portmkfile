@@ -158,7 +158,7 @@ ipif-$SYSTARG.$O devip.$O:		../port/ip.h
 devroot.$O:	$CONF.root.h
 $CONF.$O:	$CONF.root.h
 $CONF.root.c $CONF.root.h: $CONF ../port/mkroot $ROOTFILES
-	$SHELLNAME ../port/mkroot $CONF
+	$SHELLNAME ../port/mkroot $CONF AWK=$AWK
 
 audio.c:N:	../port/audio-tbls.c
 audio.c:N:	../port/audio.h

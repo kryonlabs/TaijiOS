@@ -1,3 +1,6 @@
+/* Debug macro - must have 'static int debug' in files that use this */
+#define	DBG	if(debug)print
+
 extern	vlong	libseek(int, vlong, int);
 extern	int	libread(int, void*, int);
 extern	int	libreadn(int, void*, long);
