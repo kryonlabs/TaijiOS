@@ -4,6 +4,13 @@
 
 set -e
 
+# Optional clean build flag
+CLEAN_BUILD=""
+if [ "$1" = "--clean" ]; then
+    CLEAN_BUILD="clean"
+    shift
+fi
+
 # Determine OS
 if [ -f /etc/NIXOS ]; then
     OS="nixos"
@@ -23,43 +30,31 @@ cd "$(dirname "$0")"
 # Function to build on NixOS
 build_nixos() {
     echo "Building on NixOS using nix-shell..."
-    if [ ! -f Linux/amd64/bin/emu ]; then
-        nix-shell --run 'export PATH="$PWD/Linux/amd64/bin:$PATH"; mk install'
-    else
-        echo "emu binary already exists, skipping build..."
-    fi
+    nix-shell --run "export PATH=\"\$PWD/Linux/amd64/bin:\$PATH\"; mk $CLEAN_BUILD install"
 }
 
 # Function to build on OpenBSD
 build_openbsd() {
     echo "Building on OpenBSD..."
-    if [ ! -f Linux/amd64/bin/emu ]; then
-        # OpenBSD native build
-        export SYSTARG=OpenBSD
-        export OBJTYPE=amd64
+    # OpenBSD native build
+    export SYSTARG=OpenBSD
+    export OBJTYPE=amd64
 
-        # Build mk first if needed
-        if [ ! -f Linux/amd64/bin/mk ]; then
-            echo "Building mk build tool..."
-            (cd mk && mk && mv mk /usr/local/bin/ || true)
-        fi
-
-        # Build and install
-        mk install
-    else
-        echo "emu binary already exists, skipping build..."
+    # Build mk first if needed
+    if [ ! -f Linux/amd64/bin/mk ]; then
+        echo "Building mk build tool..."
+        (cd mk && mk && mv mk /usr/local/bin/ || true)
     fi
+
+    # Build and install
+    mk $CLEAN_BUILD install
 }
 
 # Function to build on generic Linux
 build_linux() {
     echo "Building on generic Linux..."
-    if [ ! -f Linux/amd64/bin/emu ]; then
-        export PATH="$PWD/Linux/amd64/bin:$PATH"
-        mk install
-    else
-        echo "emu binary already exists, skipping build..."
-    fi
+    export PATH="$PWD/Linux/amd64/bin:$PATH"
+    mk $CLEAN_BUILD install
 }
 
 # Build based on OS
@@ -83,14 +78,52 @@ echo ""
 EMU_ROOT="$(pwd)"
 export ROOT="$EMU_ROOT"
 
-# Create minimal namespace
-mkdir -p "$ROOT/tmp"
+# Function to set up LimboOS namespace directory structure
+setup_namespace() {
+    ROOT="$1"
+
+    echo "Setting up LimboOS namespace..."
+
+    # Create standard system directories
+    mkdir -p "$ROOT/tmp"
+    mkdir -p "$ROOT/mnt"
+
+    # Create /n network namespace structure
+    mkdir -p "$ROOT/n"
+    mkdir -p "$ROOT/n/cd"
+    mkdir -p "$ROOT/n/client"
+    mkdir -p "$ROOT/n/client/chan"
+    mkdir -p "$ROOT/n/client/dev"
+    mkdir -p "$ROOT/n/disk"
+    mkdir -p "$ROOT/n/dist"
+    mkdir -p "$ROOT/n/dump"
+    mkdir -p "$ROOT/n/ftp"
+    mkdir -p "$ROOT/n/gridfs"
+    mkdir -p "$ROOT/n/kfs"
+    mkdir -p "$ROOT/n/local"
+    mkdir -p "$ROOT/n/rdbg"
+    mkdir -p "$ROOT/n/registry"
+    mkdir -p "$ROOT/n/remote"
+
+    # Create services directories
+    mkdir -p "$ROOT/services/logs"
+
+    # Set permissions (match mkfile behavior)
+    chmod 555 "$ROOT/n"
+    chmod 755 "$ROOT/tmp"
+    chmod 755 "$ROOT/mnt"
+
+    echo "Namespace setup complete."
+}
 
 # Function to run on NixOS
 run_nixos() {
     echo "Starting emu on NixOS..."
     echo "Type 'exit' to quit emu"
     echo ""
+
+    # Set up namespace before starting emu
+    setup_namespace "$ROOT"
 
     # Run emu with nix-shell environment
     exec nix-shell --run "
@@ -107,6 +140,9 @@ run_openbsd() {
     echo "Type 'exit' to quit emu"
     echo ""
 
+    # Set up namespace before starting emu
+    setup_namespace "$ROOT"
+
     export PATH="$ROOT/Linux/amd64/bin:$PATH"
 
     # Run emu
@@ -118,6 +154,9 @@ run_linux() {
     echo "Starting emu..."
     echo "Type 'exit' to quit emu"
     echo ""
+
+    # Set up namespace before starting emu
+    setup_namespace "$ROOT"
 
     export PATH="$ROOT/Linux/amd64/bin:$PATH"
 
