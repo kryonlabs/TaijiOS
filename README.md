@@ -81,6 +81,116 @@ The `run.sh` script works on NixOS, OpenBSD, and generic Linux:
 ./run.sh -g 800x600    # Run with specific geometry
 ```
 
+## Running Apps
+
+### Full Window Manager Mode
+
+Run the complete window manager with all apps:
+
+```bash
+./run.sh
+```
+
+Once emu starts, you'll see the `;` prompt. You can run Limbo programs:
+
+```limbo
+# Start the window manager
+wm/wm
+
+# List available commands
+ls /dis
+
+# Run a program
+/wm/bounce.dis 8
+
+# Exit
+exit
+```
+
+### Isolated App Mode
+
+Run any app in its own isolated emu instance with its own X11 window:
+
+```bash
+# Run bouncing balls with 8 balls
+./run-app.sh wm/bounce.dis 8
+
+# Run clock
+./run-app.sh wm/clock.dis
+
+# Run multiple instances (each in separate terminal)
+./run-app.sh wm/bounce.dis 8
+./run-app.sh wm/clock.dis
+./run-app.sh wm/bounce.dis 16
+```
+
+Each instance creates its own emu process and X11 window, completely isolated from others.
+
+#### Creating Your Own App
+
+**Simple Console App** (`hello.b`):
+
+```limbo
+implement Hello;
+
+include "sys.m";
+    sys: Sys;
+
+Hello: module {
+    init: fn(ctxt: ref Draw->Context, argv: list of string);
+};
+
+init(ctxt: ref Draw->Context, argv: list of string)
+{
+    sys = load Sys Sys->PATH;
+    sys->print("Hello from TaijiOS!\n");
+}
+```
+
+Compile and run:
+```bash
+cd appl/cmd
+mk hello.dis
+./run-app.sh hello.dis
+```
+
+**Simple Tk App** (`mytkapp.b`):
+
+```limbo
+implement Mytkapp;
+
+include "sys.m";
+    sys: Sys;
+include "draw.m";
+    draw: Draw;
+include "tk.m";
+    tk: Tk;
+
+Mytkapp: module {
+    init: fn(ctxt: ref Draw->Context, argv: list of string);
+};
+
+init(ctxt: ref Draw->Context, argv: list of string)
+{
+    sys = load Sys Sys->PATH;
+    draw = load Draw Draw->PATH;
+    tk = load Tk Tk->PATH;
+
+    # Create window
+    top := tk->toplevel(ctxt.display, "");
+
+    # Add UI
+    tk->cmd(top, "label .l -text {My App}");
+    tk->cmd(top, "button .b -text Exit -command {send cmd exit}");
+    tk->cmd(top, "pack .l .b");
+
+    # Wait for exit
+    cmdch := chan of string;
+    tk->namechan(top, cmdch, "cmd");
+    <-cmdch;
+}
+```
+
 ## Directory Structure
 
 ```
@@ -94,7 +204,8 @@ TaijiOS/
 ├── emu/              # Inferno emulator source
 ├── lib*/             # Library source code
 ├── shell.nix         # NixOS shell environment
-└── run.sh            # Universal build/run script
+├── run.sh            # Universal build/run script (full WM)
+└── run-app.sh        # Run isolated app instances
 ```
 
 ## Building from Scratch
@@ -105,52 +216,6 @@ If you need to do a complete clean build:
 # In nix-shell on NixOS
 mk nuke              # Clean all built files
 mk install           # Rebuild everything
-```
-
-## Running Programs Inside emu
-
-Once emu starts, you'll see the `;` prompt. You can run Limbo programs:
-
-```limbo
-# List files
-ls /
-
-# Run a program
-/dis/ls /
-
-# Start the window manager
-wm/wm
-
-# List available commands
-ls /dis
-
-# Check environment
-cat /env/emuroot
-
-# Exit
-exit
-```
-
-## Example: Writing a Limbo Program
-
-```limbo
-; cat > /tmp/hello.b << 'EOF'
-implement Hello;
-
-include "sys.m";
-
-Hello: module {
-    init: fn(nil: list of string);
-};
-
-init(nil: list of string) {
-    sys := load Sys Sys->PATH;
-    sys->print("Hello from TaijiOS!\n");
-}
-EOF
-
-; limbo /tmp/hello.b
-; hello
 ```
 
 ## Platform Support
@@ -213,6 +278,27 @@ If you get errors about missing `/dis` directories:
 ```bash
 # Run the full build which creates all needed directories
 mk install
+```
+
+### App fails to load in isolated mode
+
+```bash
+# Build the app first
+cd appl/wm  # or wherever the app is
+mk bounce.dis
+
+# Then run
+./run-app.sh wm/bounce.dis 8
+```
+
+### "cannot open display"
+
+```bash
+# Make sure X11 is running
+echo $DISPLAY
+
+# If empty, set it (Linux)
+export DISPLAY=:0
 ```
 
 ## Contributing
