@@ -30,16 +30,15 @@ TaijiOS brings Inferno's powerful distributed computing capabilities to modern s
 ```bash
 cd /path/to/TaijiOS
 
-# Enter the build environment
-nix-shell
+# Option 1: Use the universal script (recommended)
+./run.sh              # Build and run emu in one command
 
-# Build (first time only)
-build9ferno
+# Option 2: Use nix-shell environment
+nix-shell             # Enter the build environment
+./run.sh              # Build and run
 
-# Run Inferno emulator
-run9ferno
-# or just type:
-emu
+# For a clean rebuild
+./run.sh --clean      # Clean build then run
 ```
 
 ### On OpenBSD:
@@ -47,7 +46,7 @@ emu
 ```bash
 cd /path/to/TaijiOS
 chmod +x run.sh
-./run.sh
+./run.sh              # Build and run in one command
 ```
 
 ### On Other Linux:
@@ -60,26 +59,60 @@ chmod +x run.sh
 
 cd /path/to/TaijiOS
 chmod +x run.sh
-./run.sh
+./run.sh              # Build and run in one command
 ```
 
-## Available Commands (in nix-shell)
+## Build and Run Scripts
 
-After entering `nix-shell`, you have these helper functions:
-
-- `build9ferno` - Build TaijiOS from scratch
-- `run9ferno` - Run the Inferno emulator
-- `emu` - Alias for run9ferno
-
-## Using the Universal Script
+### run.sh - Universal Build & Run
 
 The `run.sh` script works on NixOS, OpenBSD, and generic Linux:
 
 ```bash
-./run.sh              # Build and run in one command
-./run.sh -h            # Show emu help
-./run.sh -g 800x600    # Run with specific geometry
+./run.sh              # Build and run raw emu (no auto-start)
+./run.sh --clean      # Clean build then run
+./run.sh -h           # Show emu help options
+./run.sh -g 800x600   # Run with specific geometry
 ```
+
+This script:
+- Automatically detects your OS (NixOS/OpenBSD/Linux)
+- Builds TaijiOS if needed
+- Sets up the namespace directory structure
+- Runs the raw emu interpreter
+
+### run-wm.sh - Window Manager Mode
+
+Builds and runs with the window manager auto-started:
+
+```bash
+./run-wm.sh           # Build and run with wm/wm.dis
+./run-wm.sh --clean   # Clean build then run with WM
+```
+
+### run-app.sh - Isolated App Mode
+
+Run any app in its own isolated emu instance with its own X11 window:
+
+```bash
+./run-app.sh wm/bounce.dis 8    # Run bounce with 8 balls
+./run-app.sh wm/clock.dis       # Run clock
+```
+
+Each instance creates its own emu process and X11 window, completely isolated from others.
+
+## NixOS Shell Environment
+
+When you enter `nix-shell`, the `shell.nix` provides:
+
+- **Build dependencies**: gcc, make, binutils, X11 libraries, linux headers
+- **Helper functions**: Convenience wrappers that run the scripts above
+- **Environment**: Sets PATH for mk build tool and emu binaries
+
+The helper functions in shell.nix are simply wrappers around the scripts:
+- `build9ferno` → runs `./run.sh` (build portion)
+- `run9ferno` → runs `./run.sh`
+- `emu` → runs `./run.sh` (with any arguments passed through)
 
 ## Running Apps
 
