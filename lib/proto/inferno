@@ -1042,7 +1042,6 @@ appl
 		names.b
 		newns.b
 		palm.b
-		palmdb.b
 		palmfile.b
 		parseman.b
 		plumbing.b
@@ -1639,7 +1638,6 @@ dis
 		names.dis
 		newns.dis
 		palm.dis
-		palmdb.dis
 		palmfile.dis
 		parseman.dis
 		plumbing.dis

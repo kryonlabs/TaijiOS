@@ -83,7 +83,6 @@ TARG=\
 	ninep.dis\
 	oldauth.dis\
 	palm.dis\
-	palmdb.dis\
 	palmfile.dis\
 	parseman.dis\
 	plumbmsg.dis\
