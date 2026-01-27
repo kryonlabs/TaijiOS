@@ -65,7 +65,7 @@ send(g: ref Private_info, meth, vers, uri, search : string)
 		if (g.version == nil)
 			sys->print("stats: version is unknown.\n");
 		g.bout.puts(sys->sprint("%s 200 OK\r\n", g.version));
-		g.bout.puts("Server: Charon\r\n");
+		g.bout.puts("Server: TaijiOS\r\n");
 		g.bout.puts("MIME-version: 1.0\r\n");
 		g.bout.puts(sys->sprint("Date: %s\r\n", date->dateconv(daytime->now())));
 		g.bout.puts("Content-type: text/html\r\n");

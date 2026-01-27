@@ -512,7 +512,7 @@ fail(g: ref Private_info,reason : int, message : string)
 	title:=sys->sprint("<head><title>%s</title></head>\n<body bgcolor=#ffffff>\n",
 					errormsg[reason].concise);
 	body1:=	"<h1> Error </h1>\n<P>" +
-		"Sorry, Charon is unable to process your request. The webserver reports"+
+		"Sorry, TaijiOS is unable to process your request. The webserver reports"+
 		" the following error <P><b>";
 	#concise error
 	body2:="</b><p>for the URL\n<P><b>";
@@ -534,7 +534,7 @@ fail(g: ref Private_info,reason : int, message : string)
 	if (g.bout!=nil && reason!=2){
 		g.bufio->g.bout.puts(sys->sprint("%s %s\r\n", g.version, errormsg[reason].num));
 		g.bufio->g.bout.puts(sys->sprint("Date: %s\r\n", daytime->time()));
-		g.bufio->g.bout.puts(sys->sprint("Server: Charon\r\n"));
+		g.bufio->g.bout.puts(sys->sprint("Server: TaijiOS\r\n"));
 		g.bufio->g.bout.puts(sys->sprint("MIME-version: 1.0\r\n"));
 		g.bufio->g.bout.puts(sys->sprint("Content-Type: text/html\r\n"));
 		g.bufio->g.bout.puts(sys->sprint("Content-Length: %d\r\n", len strbuf));
@@ -552,14 +552,14 @@ fail(g: ref Private_info,reason : int, message : string)
 okheaders(g: ref Private_info)
 {
 	g.bufio->g.bout.puts(sys->sprint("%s 200 OK\r\n", g.version));
-	g.bufio->g.bout.puts("Server: Charon\r\n");
+	g.bufio->g.bout.puts("Server: TaijiOS\r\n");
 	g.bufio->g.bout.puts("MIME-version: 1.0\r\n");
 }
 
 notmodified(g: ref Private_info)
 {
 	g.bufio->g.bout.puts(sys->sprint("%s 304 Not Modified\r\n", g.version));
-	g.bufio->g.bout.puts("Server: Charon\r\n");
+	g.bufio->g.bout.puts("Server: TaijiOS\r\n");
 	g.bufio->g.bout.puts("MIME-version: 1.0\r\n\r\n");
 	atexit(g);
 }

@@ -140,7 +140,6 @@ services/logs
 services/ppp
 src
 tmp
-usr/inferno/charon
 usr/inferno/keyring
 usr/inferno/tmp
 services/collab/export/services
@@ -157,7 +156,6 @@ dis/alphabet/auth/proto
 dis/auth/proto
 dis/auxi
 dis/avr
-dis/charon
 dis/collab
 dis/collab/clients
 dis/collab/lib

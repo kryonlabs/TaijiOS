@@ -77,7 +77,6 @@ namespace()
 	sys->bind("#b", "/dev", sys->MAFTER);	# debug device
 	sys->bind("#c", "/chan", sys->MREPL);
 	sys->bind("/data", "/usr/inferno", sys->MREPL|sys->MCREATE);
-	sys->bind("/data", "/usr/charon", sys->MREPL|sys->MCREATE);
 	sys->bind("/data", "/usr/shaggy", sys->MREPL|sys->MCREATE);
 }
 

@@ -3,7 +3,6 @@
 DIRS=\
 	acme\
 #	alphabet\
-	charon\
 	cmd\
 	collab\
 	demo\

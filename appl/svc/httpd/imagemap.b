@@ -80,7 +80,7 @@ init(k : ref Private_info, req: Httpd->Request)
 
 	g.bout.puts(sys->sprint("%s 301 Moved Permanently\r\n", g.version));
 	g.bout.puts(sys->sprint("Date: %s\r\n", daytime->time()));
-	g.bout.puts("Server: Charon\r\n");
+	g.bout.puts("Server: TaijiOS\r\n");
 	g.bout.puts("MIME-version: 1.0\r\n");
 	g.bout.puts("Content-type: text/html\r\n");
 	(s,nil)=str->splitl(dest, ":");

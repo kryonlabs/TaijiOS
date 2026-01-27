@@ -42,9 +42,8 @@ pkgs.mkShell {
     echo "Current directory: $(pwd)"
     echo ""
     echo "Quick start:"
-    echo "  build9ferno    - Build TaijiOS"
-    echo "  run9ferno      - Run emu (Inferno emulator)"
-    echo "  emu            - Run emu directly"
+    echo "  ./run.sh        - Build and run TaijiOS (recommended)"
+    echo "  ./run.sh --clean - Clean build and run TaijiOS"
     echo ""
 
     # Set PATH for TaijiOS tools
@@ -55,36 +54,19 @@ pkgs.mkShell {
     export LD_LIBRARY_PATH="${pkgs.xorg.libX11}/lib:${pkgs.xorg.libXext}/lib:$LD_LIBRARY_PATH"
     export LIBRARY_PATH="${pkgs.xorg.libX11}/lib:${pkgs.xorg.libXext}/lib:$LIBRARY_PATH"
 
-    # Helper function to build
-    build9ferno() {
-      echo "Building TaijiOS..."
-      cd "$ROOT"
-
-      # Set LDFLAGS to help find X11 libraries
-      export LDFLAGS="-L${pkgs.xorg.libX11}/lib -L${pkgs.xorg.libXext}/lib $LDFLAGS"
-
-      # Ensure mk can find its configuration
-      export SYSHOST=Linux
-      export SYSTARG=Linux
-      export OBJTYPE=amd64
-      export SHELLTYPE=sh
-
-      # Use mk from utils/mk explicitly if needed
-      mk install
-    }
-
-    # Helper function to run emu
+    # Wrapper to run the script
     run9ferno() {
-      echo "Starting TaijiOS (Inferno emulator)..."
-      echo "Type 'exit' or Ctrl+D to quit"
-      echo ""
-      cd "$ROOT" || exit 1
-      exec "$ROOT/Linux/amd64/bin/emu" -r "$ROOT" "$@"
+      ./run.sh "$@"
     }
 
-    # Alias for direct emu access
+    # Build wrapper (just the build portion)
+    build9ferno() {
+      ./run.sh "$@"
+    }
+
+    # Alias for emu
     emu() {
-      run9ferno "$@"
+      ./run.sh "$@"
     }
   '';
 

@@ -176,7 +176,7 @@ init(nil: ref Draw->Context, argv: list of string)
 		sys->fprint(stderr, "can't announce %s: %r\n", addr);
 		exit;
 	}
-	sys->fprint(logfile,"************ Charon Awakened at %s\n",
+	sys->fprint(logfile,"************ TaijiOS HTTP server started at %s\n",
 			daytime->time());
 	for(;;)
 		doit(c);
@@ -310,7 +310,7 @@ parsereq(g: ref Private_info)
 		}else{
 			g.bout.puts(sys->sprint("%s 301 Moved Permanently\r\n", g.version));
 			g.bout.puts(sys->sprint("Date: %s\r\n", daytime->time()));
-			g.bout.puts("Server: Charon\r\n");
+			g.bout.puts("Server: TaijiOS\r\n");
 			g.bout.puts("MIME-version: 1.0\r\n");
 			g.bout.puts("Content-type: text/html\r\n");
 			g.bout.puts(sys->sprint("URI: <%s>\r\n",parser->urlconv(uri)));
@@ -385,7 +385,7 @@ send(g: ref Private_info,name, vers, uri, search : string)
 		} else if(force301 != 0 && vers != ""){
 			g.bout.puts(sys->sprint("%s 301 Moved Permanently\r\n", g.version));
 			g.bout.puts(sys->sprint("Date: %s\r\n", daytime->time()));
-			g.bout.puts("Server: Charon\r\n");
+			g.bout.puts("Server: TaijiOS\r\n");
 			g.bout.puts("MIME-version: 1.0\r\n");
 			g.bout.puts("Content-type: text/html\r\n");
 			(nil, reluri) := str->splitstrr(parser->urlconv(w), SVR_ROOT);
@@ -425,7 +425,7 @@ send(g: ref Private_info,name, vers, uri, search : string)
 			parser->logit(g,"no content-encoding ok");
 		}else
 			g.bout.puts(sys->sprint("%s 200 OK\r\n", g.version));
-		g.bout.puts("Server: Charon\r\n");
+		g.bout.puts("Server: TaijiOS\r\n");
 		g.bout.puts(sys->sprint("Last-Modified: %s\r\n", date->dateconv(dir.mtime)));
 		g.bout.puts(sys->sprint("Version: %uxv%ux\r\n", int dir.qid.path, dir.qid.vers));
 		g.bout.puts(sys->sprint("Message-Id: <%uxv%ux@%s>\r\n",

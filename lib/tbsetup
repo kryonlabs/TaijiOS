@@ -9,10 +9,9 @@
 !EXEC=/dis/dbfs.dis -e /data/incalls /mnt/incall
 !EXEC=/dis/wm/sword/answerphone.dis
 !EXEC=/dis/wm/sword/vmail_led.dis /mnt/vmail /cvt/cons/0/ctl
-!NELEMS=7
+!NELEMS=6
 !HEIGHT=44
 phone:Virtual Phonepad:/dis/wm/sword/phonepad.dis
-www:HTML Browser:/dis/charon.dis
 mail:Mail:/dis/wm/mailtool.dis
 config:Configuration:/dis/wm/sword/config.dis
 addr:PIM:/dis/wm/sword/addrbook.dis
