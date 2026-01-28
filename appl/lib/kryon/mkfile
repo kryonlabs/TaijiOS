@@ -1,0 +1,19 @@
+<../../../mkconfig
+
+MODULES=\
+	kryonget.dis\
+	kryonset.dis\
+
+all:V: $MODULES
+
+install:V: $MODULES
+	mkdir -p $ROOT/$SYSHOST/$OBJTYPE/dis/lib/kryon
+	cp $MODULES $ROOT/$SYSHOST/$OBJTYPE/dis/lib/kryon/
+
+%.dis: %.b
+	limbo -I../../../module $LIMBOFLAGS -o $target $prereq
+
+clean:V:
+	rm -f *.dis *.sbl
+
+nuke:V: clean

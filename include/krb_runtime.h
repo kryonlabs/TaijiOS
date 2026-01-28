@@ -86,6 +86,12 @@ struct KrbRuntime {
     void (*on_widget_click)(KrbRuntime *runtime, KrbWidget *widget);
     void (*on_widget_change)(KrbRuntime *runtime, KrbWidget *widget);
     void (*on_theme_change)(KrbRuntime *runtime, const char *theme);
+
+    /* Script execution */
+    void *shell_runtime;       /* KrbShellRuntime* (opaque) */
+    void *shell_context;       /* KrbShellContext* (opaque) */
+    void **script_functions;   /* KryonScriptFunction** array */
+    uint32_t script_function_count;
 };
 
 /*

@@ -1,0 +1,16 @@
+<../mkconfig
+
+LIB=libkrb_shell.a
+
+OFILES=\
+	krb_shell_runtime.$O\
+	krb_shell_exec.$O\
+	krb_shell_env.$O\
+	krb_shell_types.$O\
+
+HFILES=\
+	$ROOT/include/krb_shell.h\
+	$ROOT/include/krb_runtime.h\
+	$ROOT/include/interp.h\
+
+<$ROOT/mkfiles/mksyslib-$SHELLTYPE

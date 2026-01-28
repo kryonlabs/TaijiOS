@@ -25,6 +25,7 @@ EMUDIRS=\
 	libdynld\
 	libkrb\
 	libkrb_runtime\
+	libkrb_shell\
 	libkrb_render\
 	utils/data2c\
 	utils/ndate\

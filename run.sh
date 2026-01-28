@@ -6,8 +6,12 @@ set -e
 
 # Optional clean build flag
 CLEAN_BUILD=""
+BUILD_ONLY=""
 if [ "$1" = "--clean" ]; then
     CLEAN_BUILD="clean"
+    shift
+elif [ "$1" = "--build" ]; then
+    BUILD_ONLY="yes"
     shift
 fi
 
@@ -127,13 +131,9 @@ run_nixos() {
     # Set up namespace before starting emu
     setup_namespace "$ROOT"
 
-    # Run emu with nix-shell environment
-    exec nix-shell --run "
-        export PATH='$ROOT/Linux/amd64/bin:\$PATH'
-        export ROOT='$ROOT'
-        cd '$ROOT'
-        exec Linux/amd64/bin/emu -r '$ROOT' "\$@"
-    " -- "$@"
+    # Run emu directly (nix-shell only needed for building)
+    export PATH="$ROOT/Linux/amd64/bin:$PATH"
+    exec "$ROOT/Linux/amd64/bin/emu" -r "$ROOT" "$@"
 }
 
 # Function to run on OpenBSD

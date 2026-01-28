@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "krb_runtime.h"
+#include "krb_shell.h"
 
 /* Helper to read little-endian values */
 static uint32_t
@@ -170,6 +171,54 @@ build_widget_tree(KrbRuntime *runtime)
     return 0;
 }
 
+/* Load script functions from KRB file */
+static int
+load_script_functions(KrbRuntime *runtime)
+{
+    KrbFile *file;
+    uint32_t i;
+
+    if (runtime == nil || runtime->krb_file == nil)
+        return -1;
+
+    file = runtime->krb_file;
+
+    /* Allocate script functions array */
+    if (file->script_count == 0) {
+        runtime->script_functions = nil;
+        runtime->script_function_count = 0;
+        return 0;
+    }
+
+    runtime->script_functions = mallocz(file->script_count * sizeof(void*), 1);
+    if (runtime->script_functions == nil)
+        return -1;
+
+    runtime->script_function_count = file->script_count;
+
+    /* Load each script function */
+    for (i = 0; i < file->script_count; i++) {
+        KrbScript *script = &file->scripts[i];
+        KryonScriptFunction *func;
+
+        func = mallocz(sizeof(KryonScriptFunction), 1);
+        if (func == nil)
+            continue;
+
+        /* Get script metadata from KRB file */
+        func->script_id = script->id;
+        func->language = krb_get_string(file, script->language_offset);
+        func->code = krb_get_string(file, script->code_offset);
+        func->name = nil;  /* TODO: Extract from metadata */
+        func->parameters = nil;
+        func->param_count = 0;
+
+        runtime->script_functions[i] = func;
+    }
+
+    return 0;
+}
+
 KrbRuntime*
 krb_runtime_init(KrbFile *file)
 {
@@ -191,6 +240,16 @@ krb_runtime_init(KrbFile *file)
         return nil;
     }
 
+    /* Initialize shell runtime */
+    runtime->shell_runtime = krb_shell_init();
+    if (runtime->shell_runtime != nil) {
+        runtime->shell_context = krb_shell_create_context(
+            (KrbShellRuntime*)runtime->shell_runtime, runtime);
+    }
+
+    /* Load script functions from KRB file */
+    load_script_functions(runtime);
+
     return runtime;
 }
 
@@ -201,6 +260,22 @@ krb_runtime_cleanup(KrbRuntime *runtime)
 
     if (runtime == nil)
         return;
+
+    /* Cleanup shell runtime */
+    if (runtime->shell_context != nil)
+        krb_shell_destroy_context((KrbShellContext*)runtime->shell_context);
+    if (runtime->shell_runtime != nil)
+        krb_shell_cleanup((KrbShellRuntime*)runtime->shell_runtime);
+
+    /* Free script functions */
+    if (runtime->script_functions != nil) {
+        for (i = 0; i < runtime->script_function_count; i++) {
+            KryonScriptFunction *func = (KryonScriptFunction*)runtime->script_functions[i];
+            if (func != nil)
+                free(func);
+        }
+        free(runtime->script_functions);
+    }
 
     /* Free all widgets */
     if (runtime->widgets != nil) {
@@ -328,12 +403,42 @@ int
 krb_runtime_trigger_event(KrbRuntime *runtime, KrbWidget *widget,
                           const char *event_type, void *event_data)
 {
+    char *handler_name;
+
     if (runtime == nil || widget == nil || event_type == nil)
         return -1;
 
-    /* TODO: Execute event handler script */
-    /* For now, just trigger callbacks */
+    /* Get event handler name from widget */
+    handler_name = nil;
+    if (strcmp(event_type, "onClick") == 0)
+        handler_name = widget->events.onClick;
+    else if (strcmp(event_type, "onChange") == 0)
+        handler_name = widget->events.onChange;
+    else if (strcmp(event_type, "onHover") == 0)
+        handler_name = widget->events.onHover;
+    else if (strcmp(event_type, "onFocus") == 0)
+        handler_name = widget->events.onFocus;
+    else if (strcmp(event_type, "onBlur") == 0)
+        handler_name = widget->events.onBlur;
+    else if (strcmp(event_type, "onKeyPress") == 0)
+        handler_name = widget->events.onKeyPress;
 
+    /* Execute script handler if available */
+    if (handler_name != nil && runtime->shell_context != nil) {
+        int result;
+        result = krb_shell_execute_function(
+            (KrbShellContext*)runtime->shell_context,
+            handler_name,
+            event_data);
+
+        if (result == 0) {
+            /* Script executed successfully */
+            return 0;
+        }
+        /* If script execution failed, fall through to callbacks */
+    }
+
+    /* Trigger callbacks as fallback */
     if (strcmp(event_type, "onClick") == 0) {
         if (runtime->on_widget_click != nil) {
             runtime->on_widget_click(runtime, widget);
