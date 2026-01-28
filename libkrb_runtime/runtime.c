@@ -4,8 +4,7 @@
  * Manages the widget tree and lifecycle of KRB applications.
  */
 
-#include <u.h>
-#include <libc.h>
+#include "lib9.h"
 #include <draw.h>
 #include <stdlib.h>
 #include <string.h>

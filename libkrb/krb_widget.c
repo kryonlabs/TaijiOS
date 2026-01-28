@@ -4,8 +4,7 @@
  * Constructs the widget tree from parsed KRB file data.
  */
 
-#include <u.h>
-#include <libc.h>
+#include "lib9.h"
 #include "krb.h"
 #include "krb_types.h"
 

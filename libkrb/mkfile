@@ -9,5 +9,6 @@ OFILES=\
 
 HFILES=\
 	$ROOT/include/krb.h\
+	$ROOT/include/krb_types.h\
 
 <$ROOT/mkfiles/mksyslib-$SHELLTYPE

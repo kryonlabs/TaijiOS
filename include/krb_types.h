@@ -9,7 +9,6 @@
 #define KRB_TYPES_H
 
 #include <stdint.h>
-#include <draw.h>
 
 /* KRB File Header */
 typedef struct {

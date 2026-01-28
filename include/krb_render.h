@@ -7,9 +7,8 @@
 #ifndef KRB_RENDER_H
 #define KRB_RENDER_H
 
-#include <u.h>
-#include <libc.h>
-#include <draw.h>
+#include <stdint.h>
+#include <stddef.h>
 #include "krb_runtime.h"
 
 /* Draw context */

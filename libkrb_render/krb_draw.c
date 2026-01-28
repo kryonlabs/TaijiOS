@@ -4,8 +4,7 @@
  * Provides drawing context and primitive drawing operations.
  */
 
-#include <u.h>
-#include <libc.h>
+#include "lib9.h"
 #include <draw.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +27,7 @@ krb_render_init(Display *display, Screen *screen, Image *window_image)
     ctx->default_font = openfont(display, "*default*");
     if (ctx->default_font == nil) {
         /* Fallback to built-in font */
-        ctx->default_font = font;
+        ctx->default_font = getdefont(display);
     }
 
     /* Initialize color cache */
@@ -89,7 +88,7 @@ krb_get_color_image(KrbDrawContext *ctx, uint32_t color)
     /* Create new color image */
     draw_color = krb_color_to_draw(color);
     img = allocimage(ctx->display, Rect(0, 0, 1, 1),
-                     screen->chan, 1, draw_color);
+                     ctx->display->chan, 1, draw_color);
     if (img == nil)
         return nil;
 
@@ -132,7 +131,7 @@ krb_draw_text(KrbDrawContext *ctx, Point pos, const char *text,
     if (color_img == nil)
         return;
 
-    string(ctx->window_image, pos, color_img, ZP, font, text);
+    string(ctx->window_image, pos, color_img, ZP, font, (char*)text);
 }
 
 /* Draw border */

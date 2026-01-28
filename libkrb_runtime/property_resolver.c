@@ -4,8 +4,7 @@
  * Resolves property values including colors, dimensions, and theme variables.
  */
 
-#include <u.h>
-#include <libc.h>
+#include "lib9.h"
 #include <draw.h>
 #include <stdlib.h>
 #include <string.h>

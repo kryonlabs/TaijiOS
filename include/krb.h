@@ -77,6 +77,9 @@ char* krb_get_widget_type_name(KrbFile *file, KrbWidgetInstance *widget);
 /* Get widget ID string */
 char* krb_get_widget_id(KrbFile *file, KrbWidgetInstance *widget);
 
+/* Get root widget of the tree */
+KrbWidgetInstance* krb_get_root_widget(KrbFile *file);
+
 /*
  * Validation functions
  */

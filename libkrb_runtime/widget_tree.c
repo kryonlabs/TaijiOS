@@ -4,8 +4,7 @@
  * Functions for managing the widget tree structure.
  */
 
-#include <u.h>
-#include <libc.h>
+#include "lib9.h"
 #include <draw.h>
 #include <stdlib.h>
 #include <string.h>

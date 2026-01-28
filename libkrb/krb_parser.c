@@ -4,8 +4,7 @@
  * Parses individual sections of a KRB file.
  */
 
-#include <u.h>
-#include <libc.h>
+#include "lib9.h"
 #include "krb.h"
 #include "krb_types.h"
 

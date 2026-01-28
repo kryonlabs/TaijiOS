@@ -4,8 +4,7 @@
  * Handles loading KRB files from disk or memory.
  */
 
-#include <u.h>
-#include <libc.h>
+#include "lib9.h"
 #include <fcntl.h>
 #include "krb.h"
 #include "krb_types.h"

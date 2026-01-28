@@ -7,9 +7,8 @@
 #ifndef KRB_RUNTIME_H
 #define KRB_RUNTIME_H
 
-#include <u.h>
-#include <libc.h>
-#include <draw.h>
+#include <stdint.h>
+#include <stddef.h>
 #include "krb.h"
 
 /* Forward declarations */
