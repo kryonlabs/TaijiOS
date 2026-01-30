@@ -376,6 +376,7 @@ realinit(ctxt: ref Draw->Context, argv: list of string)
 		sys->fprint(sys->fildes(2), "krbview: cannot load krbloader: %r\n");
 		raise "fail:load";
 	}
+	krbloader->init();
 
 	sys->pctl(Sys->NEWPGRP, nil);
 	tkclient->init();
