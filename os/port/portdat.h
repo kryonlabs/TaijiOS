@@ -711,7 +711,7 @@ struct Proc
 	void	*dbgreg;	/* User registers for devproc */
 
 	PFPU;			/* machine specific fpu state */
-	PMMU;			/* machine specific mmu state, obsolete on 9ferno amd64? */
+	PMMU;			/* machine specific mmu state, obsolete on TaijiOS amd64? */
 
 	char	*syscalltrace;	/* syscall trace */
 	

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-# Run script for 9ferno emu on NixOS
+# Run script for TaijiOS emu on NixOS
 # This script launches the Inferno OS emulator
 
 set -e
 
-echo "=== Starting Inferno OS (9ferno) ==="
+echo "=== Starting TaijiOS ==="
 
 # Get the root directory
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

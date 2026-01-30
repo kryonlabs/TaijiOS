@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-# Build script for 9ferno on NixOS
+# Build script for TaijiOS on NixOS
 # This script builds the Inferno OS and emu
 
 set -e
 
-echo "=== Building 9ferno ==="
+echo "=== Building TaijiOS ==="
 
 # Get the root directory
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

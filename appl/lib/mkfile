@@ -67,6 +67,7 @@ TARG=\
 	irsim.dis\
 	itslib.dis\
 	json.dis\
+	yaml.dis\
 	keyset.dis\
 	libc.dis\
 	libc0.dis\
@@ -246,6 +247,7 @@ ida.dis:	$ROOT/module/ida.m
 rfc822.dis:	$ROOT/module/rfc822.m
 csv.dis: $ROOT/module/csv.m
 json.dis: $ROOT/module/json.m
+yaml.dis: $ROOT/module/yaml.m
 lists.dis:	$ROOT/module/lists.m
 vac.dis:	$ROOT/module/vac.m $ROOT/module/venti.m
 dial.dis:	$ROOT/module/dial.m

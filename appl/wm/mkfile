@@ -29,6 +29,8 @@ TARG=\
 	filename.dis\
 	getauthinfo.dis\
 	keyboard.dis\
+	krbview.dis\
+	krbloader.dis\
 	logon.dis\
 	logwindow.dis\
 	man.dis\
@@ -67,9 +69,11 @@ TARG=\
 	wmplay.dis\
 
 MODULES=\
+	krbloader.m\
 	wmdeb.m\
 
 SYSMODULES=\
+	arg.m\
 	bufio.m\
 	cci.m\
 	daytime.m\

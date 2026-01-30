@@ -1,4 +1,4 @@
-# Makefile wrapper for 9ferno
+# Makefile wrapper for taiji
 # Provides convenient targets for building and running
 
 .PHONY: all build run clean help emu nuke
@@ -6,9 +6,9 @@
 # Default target
 all: build
 
-# Build 9ferno
+# Build taiji
 build:
-	@echo "Building 9ferno..."
+	@echo "Building TaijiOS..."
 	@if [ -f /etc/NIXOS ]; then \
 		nix-shell --run 'export PATH="$$PWD/Linux/amd64/bin:$$PATH"; mk install'; \
 	else \
@@ -33,20 +33,20 @@ emu: run
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@export PATH="$$PWD/Linux/amd64/bin:$$PATH"; \
+	@export PATH="$$PWD/Linux/amd64/bin:$$PATH"; export ROOT="$$PWD"; \
 	mk clean
 
 # Complete rebuild
 nuke:
 	@echo "Removing all built files..."
-	@export PATH="$$PWD/Linux/amd64/bin:$$PATH"; \
+	@export PATH="$$PWD/Linux/amd64/bin:$$PATH"; export ROOT="$$PWD"; \
 	mk nuke
 
 # Show help
 help:
-	@echo "9ferno Makefile targets:"
+	@echo "TaijiOS Makefile targets:"
 	@echo ""
-	@echo "  make build   - Build 9ferno (or use: ./run.sh)"
+	@echo "  make build   - Build TaijiOS (or use: ./run.sh)"
 	@echo "  make run     - Run Inferno emulator (or use: ./run.sh)"
 	@echo "  make emu     - Alias for 'make run'"
 	@echo "  make clean   - Clean build artifacts"
@@ -54,6 +54,6 @@ help:
 	@echo "  make help    - Show this help message"
 	@echo ""
 	@echo "Quick start:"
-	@echo "  On NixOS:     nix-shell (then type: build9ferno, emu)"
+	@echo "  On NixOS:     nix-shell"
 	@echo "  Any system:   ./run.sh"
 	@echo ""

@@ -169,7 +169,7 @@ fn usedhcp {
 #	the ether device ip address
 #	fs address
 #	port
-# 9ferno takes the following shortcuts, for now
+# TaijiOS takes the following shortcuts, for now
 #	hardcoded the ether device to be /net/ether0
 #	use $bootargs for the ethernet ip address, mask and gateway
 #	use $fs for the fs address

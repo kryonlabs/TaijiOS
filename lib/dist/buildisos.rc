@@ -2,7 +2,7 @@
 rfork en
 
 # TODO this is cinap's 9front release script
-#	need to do this for 9ferno at some point
+#	need to do this for TaijiOS at some point
 
 cd $home/code/plan9front
 
