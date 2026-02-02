@@ -1,0 +1,53 @@
+<../../../mkconfig
+
+# Lua VM for Inferno/Limbo
+# Building Phase 1, 2, 3, 4, 5, 6, and 7 components
+
+TARG=\
+	luavm.dis\
+
+VMODULES=\
+	lua_types.b\
+	lua_string.b\
+	lua_state.b\
+	lua_object.b\
+	lua_table.b\
+	lua_hash.b\
+	lua_opcodes.b\
+	lua_lexer.b\
+	lua_parser.b\
+	lua_code.b\
+	lua_vm.b\
+	lua_debug.b\
+	lua_func.b\
+	lua_upval.b\
+	lua_calls.b\
+	lua_thread.b\
+	lua_coro.b\
+	lua_yield.b\
+	lua_corolib.b\
+	lua_gc.b\
+	lua_incrementalgc.b\
+	lua_gengc.b\
+	lua_weaktables.b\
+	lua_gcmem.b\
+
+LMODULES=\
+	lua_baselib.b\
+	lua_strlib.b\
+	lua_tablib.b\
+	lua_mathlib.b\
+	lua_iolib.b\
+	lua_oslib.b\
+	lua_package.b\
+	lua_debuglib.b\
+	lua_utf8.b\
+
+SYSMODULES=\
+	sys.m\
+	string.m\
+	luavm.m\
+
+DISBIN=$ROOT/dis/lib
+
+<$ROOT/mkfiles/mkdis

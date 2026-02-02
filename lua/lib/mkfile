@@ -1,0 +1,57 @@
+<../../mkconfig
+
+# Lua VM Libraries for Inferno/Limbo
+# Standard libraries and Draw/Tk bindings
+
+TARG=\
+	lua_baselib.dis\
+	lua_strlib.dis\
+	lua_tablib.dis\
+	lua_iolib.dis\
+	lua_oslib.dis\
+	lua_debuglib.dis\
+	lua_package.dis\
+	lua_utf8.dis\
+	lua_drawlib.dis\
+	lua_tklib.dis\
+	lua_disparser.dis\
+	lua_functioncaller.dis\
+	lua_proxy.dis\
+
+MODULES=\
+	lua_baselib.b\
+	lua_strlib.b\
+	lua_tablib.b\
+	lua_iolib.b\
+	lua_oslib.b\
+	lua_debuglib.b\
+	lua_package.b\
+	lua_utf8.b\
+	lua_drawlib.b\
+	lua_tklib.b\
+	lua_disparser.b\
+	lua_functioncaller.b\
+	lua_proxy.b\
+
+SYSMODULES=\
+	sys.m\
+	draw.m\
+	tk.m\
+	tkclient.m\
+	bufio.m\
+	luavm.m\
+	lua_drawlib.m\
+	lua_tklib.m\
+	lua_baselib.m\
+	lua_strlib.m\
+	lua_tablib.m\
+	lua_iolib.m\
+	lua_oslib.m\
+	lua_debuglib.m\
+	lua_package.m\
+	luadisparser.m\
+	limbocaller.m\
+
+DISBIN=$ROOT/dis/lib
+
+<$ROOT/mkfiles/mkdis

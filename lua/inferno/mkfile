@@ -1,0 +1,23 @@
+<../../../mkconfig
+
+# Lua VM for Inferno/Limbo - Integration Layer
+# Building Phase 8 components
+
+TARG=\
+	luavm.dis\
+
+INFERMODULES=\
+	lua_inferno.b\
+	lua_disloader.b\
+	lua_fileio.b\
+	lua_process.b\
+
+SYSMODULES=\
+	sys.m\
+	draw.m\
+	luavm.m\
+	lua_inferno.m\
+
+DISBIN=$ROOT/dis/lib
+
+<$ROOT/mkfiles/mkdis
