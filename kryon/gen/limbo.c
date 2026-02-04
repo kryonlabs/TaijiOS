@@ -420,9 +420,11 @@ static void codegen_init(CodeGen *cg, Program *prog) {
 
     /* Configure and show window */
     fprintf(cg->out, "\n");
+    /* Important: pack propagate prevents window manager from resizing window */
+    fprintf(cg->out, "    tk->cmd(toplevel, \"pack propagate . 0\");\n");
     fprintf(cg->out, "    tk->cmd(toplevel, \"update\");\n");
     fprintf(cg->out, "    tkclient->onscreen(toplevel, nil);\n");
-    fprintf(cg->out, "    tkclient->startinput(toplevel, \"kbd\"::\"ptr\"::nil);\n\n");
+    fprintf(cg->out, "    tkclient->startinput(toplevel, \"ptr\"::nil);\n\n");
     fprintf(cg->out, "    stop := chan of int;\n");
     fprintf(cg->out, "    spawn tkclient->handler(toplevel, stop);\n");
 

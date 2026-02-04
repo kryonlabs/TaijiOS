@@ -160,8 +160,8 @@ Text.init(t : self ref Text, f : ref File, r : Rect, rf : ref Dat->Reffont, cols
 	for(i:=0; i<Framem->NCOL; i++)
 		t.frame.cols[i] = cols[i];
 
-	# Initialize syntax colors if syntax highlighting is enabled
-	if(syntaxm != nil && syntaxm->enabled()){
+	# Initialize syntax colors
+	if(syntaxm != nil){
 		# Syntax colors: RGBA format
 		t.frame.syncols[Framem->SYN_KWD] = display.color(Draw->Blue);      # Blue
 		t.frame.syncols[Framem->SYN_STR] = display.color(Draw->Green);     # Green
@@ -1478,7 +1478,7 @@ Text.reset(t : self ref Text)
 # This is a simple implementation that colors boxes based on their content
 applysyntax(t : ref Text)
 {
-	if(syntaxm == nil || !syntaxm->enabled())
+	if(syntaxm == nil)
 		return;
 	if(t.what != Body)
 		return;

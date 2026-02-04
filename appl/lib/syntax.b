@@ -34,12 +34,10 @@ extmap := array[] of {
 };
 
 # Check if syntax highlighting is enabled
+# Always enabled by default
 enabled() : int
 {
-	s := env->getenv("syntax-highlight");
-	if (s == nil)
-		s = env->getenv("syntax");
-	return (s != nil && s != "0");
+	return 1;
 }
 
 # Detect language from filename and optional content

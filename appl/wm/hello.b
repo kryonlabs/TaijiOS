@@ -48,9 +48,10 @@ init(ctxt: ref Draw->Context, nil: list of string)
     tk->namechan(toplevel, cmd, "cmd");
 
 
+    tk->cmd(toplevel, "pack propagate . 0");
     tk->cmd(toplevel, "update");
     tkclient->onscreen(toplevel, nil);
-    tkclient->startinput(toplevel, "kbd"::"ptr"::nil);
+    tkclient->startinput(toplevel, "ptr"::nil);
 
     stop := chan of int;
     spawn tkclient->handler(toplevel, stop);

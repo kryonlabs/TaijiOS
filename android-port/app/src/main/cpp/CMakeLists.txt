@@ -43,17 +43,29 @@ set(EMU_PORT_SOURCES
 	${EMU_PORT}/cache.c
 	${EMU_PORT}/chan.c
 	${EMU_PORT}/dev.c
+	${EMU_PORT}/devcap.c
+	${EMU_PORT}/devcmd.c
 	${EMU_PORT}/devcons.c
 	${EMU_PORT}/devdraw.c
+	${EMU_PORT}/devdup.c
+	${EMU_PORT}/devenv.c
+	${EMU_PORT}/devfs-posix.c
+	${EMU_PORT}/devindir.c
+	${EMU_PORT}/devip.c
+	${EMU_PORT}/devmem.c
 	${EMU_PORT}/devmnt.c
-	${EMU_PORT}/devroot.c
 	${EMU_PORT}/devpipe.c
 	${EMU_PORT}/devprof.c
+	${EMU_PORT}/devprog.c
+	${EMU_PORT}/devroot.c
 	${EMU_PORT}/devsrv.c
 	${EMU_PORT}/devssl.c
 	${EMU_PORT}/devtab.c
 	${EMU_PORT}/dis.c
+	${EMU_PORT}/env.c
 	${EMU_PORT}/error.c
+	${EMU_PORT}/errstr.c
+	${EMU_PORT}/exception.c
 	${EMU_PORT}/kproc-pthreads.c
 	${EMU_PORT}/pgrp.c
 	${EMU_PORT}/proc.c

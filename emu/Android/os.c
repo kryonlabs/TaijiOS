@@ -402,10 +402,9 @@ char** rebootargv = nil;
 
 /* poolread is defined in emu/port/alloc.c */
 
-int
-cflag = 0;
+/* cflag is in emu/port/dis.c */
 
-int keepbroken = 0;
+/* keepbroken is in emu/port/dis.c */
 char* exdebug = nil;
 
 void
@@ -556,33 +555,15 @@ validstat(uchar *d, int n)
 	USED(n);
 }
 
-/* Rendez synchronization */
-void
-acquire(Rendez *r)
-{
-	USED(r);
-}
-
-void
-release(Rendez *r)
-{
-	USED(r);
-}
+/* acquire and release are in emu/port/proc.c */
 
 /* Root device table - defined in emu-g.root.h */
 /* Process monitoring */
 /* memmonitor is defined as a function pointer in emu/port/alloc.c */
-int progpid = 0;
 
-/* PC to disassembler - stub for profiling */
-char*
-pc2dispc(uchar *pc, char *buf, int n)
-{
-	USED(pc);
-	USED(n);
-	if (n > 0) buf[0] = '\0';
-	return buf;
-}
+/* progpid() function is in emu/port/dis.c */
+
+/* pc2dispc is in emu/port/devprog.c with different signature (Inst*, Module*) */
 
 /* poolmsize is defined in emu/port/alloc.c */
 
@@ -1064,13 +1045,7 @@ showjmpbuf(char *msg)
 	USED(msg);
 }
 
-/* newmount is in emu/port/pgrp.c */
-
-void
-mountfree(Mount *m)
-{
-	USED(m);
-}
+/* newmount and mountfree are in emu/port/pgrp.c */
 
 /* Kernel date/time - defined in emu-g.c */
 /* User name for the system */
@@ -1108,8 +1083,7 @@ int gkscanid = 0;
 
 /* emuinit is defined below with correct signature */
 
-/* Current running process */
-Proc *currun = nil;
+/* currun() function is in emu/port/dis.c */
 
 /* RC4 backward - move RC4 state backward */
 void
@@ -1293,15 +1267,7 @@ egverify(EGpub *key, mpint *hash, mpint *sig)
 	return nil;
 }
 
-/* Kernel error string */
-void
-kwerrstr(char *fmt, ...)
-{
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(errbuf, sizeof(errbuf), fmt, args);
-	va_end(args);
-}
+/* kwerrstr is in emu/port/errstr.c */
 
 /* FreeType font functions */
 typedef struct Face Face;
@@ -1361,12 +1327,7 @@ freedyndata(void)
 {
 }
 
-/* Kill command */
-void
-killcomm(void *c)
-{
-	USED(c);
-}
+/* killcomm is in emu/port/pgrp.c */
 
 /* Error with format */
 void
@@ -2284,14 +2245,7 @@ mkdrawimage(void *tk, void *d, char *name, char *data, int ndata)
 	return nil;
 }
 
-/* Program creation */
-void*
-newprog(void *mod, void *rstart)
-{
-	USED(mod);
-	USED(rstart);
-	return nil;
-}
+/* newprog is in emu/port/dis.c */
 
 /* Display global */
 void *_display = nil;
@@ -2987,17 +2941,19 @@ dsasigfree(void *sig)
 	USED(sig);
 }
 
-/* Missing device tables - stub implementations */
-Dev envdevtab;
-Dev progdevtab;
-Dev dupdevtab;
-Dev capdevtab;
-Dev fsdevtab;
-Dev cmddevtab;
-Dev indirdevtab;
-Dev ipdevtab;
-Dev eiadevtab;
-Dev memdevtab;
+/* Device tables - extern declarations */
+extern Dev envdevtab;
+extern Dev progdevtab;
+extern Dev dupdevtab;
+extern Dev capdevtab;
+extern Dev fsdevtab;
+extern Dev cmddevtab;
+extern Dev indirdevtab;
+extern Dev ipdevtab;
+extern Dev eiadevtab;
+extern Dev memdevtab;
+
+/* vflag is in emu/port/dis.c */
 
 /* Missing module initialization */
 void
@@ -3039,3 +2995,32 @@ libinit(char *imod)
 }
 
 /* emuinit is declared in fns.h as: void emuinit(void*); */
+
+/* Stub implementations for missing architecture-specific functions */
+
+/* FP (Floating Point) save/restore - stubs for ARM64 */
+void
+FPsave(void *fp)
+{
+	USED(fp);
+	/* TODO: Implement ARM64 FP register save */
+}
+
+void
+FPrestore(void *fp)
+{
+	USED(fp);
+	/* TODO: Implement ARM64 FP register restore */
+}
+
+void
+FPinit(void)
+{
+	/* TODO: Initialize ARM64 FP state */
+}
+
+/* Signal handler is system-provided */
+
+/* dbgexit is in emu/port/devprog.c */
+/* vflag is in emu/port/dis.c */
+/* closeegrp is in emu/port/env.c */
