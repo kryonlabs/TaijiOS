@@ -136,8 +136,56 @@ case "$OS" in
         ;;
 esac
 
-# Build wminit if needed
-build_wminit
+# Special case for wmclient-based apps (acme, etc.)
+# These apps require full WM infrastructure including plumber
+# Run them through wm.dis with the app as the initial command
+is_wmclient_app() {
+    case "$APPDIS" in
+        acme.dis|acme/acme.dis|/dis/acme.dis|/dis/acme/acme.dis)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Build wminit or wm depending on app type
+if is_wmclient_app; then
+    # For wmclient apps, build wm.dis instead of wminit.dis
+    build_wminit() {
+        case "$OS" in
+            nixos)
+                nix-shell --run "
+                    export PATH=\"$ROOT/Linux/amd64/bin:$PATH\"
+                    export ROOT=\"$ROOT\"
+                    cd \"$ROOT/appl/wm\"
+                    if [ ! -f \"$ROOT/dis/wm.dis\" ]; then
+                        echo \"Building wm.dis...\"
+                        mk wm.dis
+                    fi
+                "
+                ;;
+            openbsd)
+                if [ ! -f "$ROOT/dis/wm.dis" ]; then
+                    echo "Building wm.dis..."
+                    cd "$ROOT/appl/wm" && mk wm.dis
+                fi
+                ;;
+            linux)
+                export PATH="$ROOT/Linux/amd64/bin:$PATH"
+                if [ ! -f "$ROOT/dis/wm.dis" ]; then
+                    echo "Building wm.dis..."
+                    cd "$ROOT/appl/wm" && mk wm.dis
+                fi
+                ;;
+        esac
+    }
+    build_wminit
+else
+    # For other apps, build wminit.dis
+    build_wminit
+fi
 
 echo ""
 echo "Starting app: $APPDIS"
@@ -190,6 +238,19 @@ run_nixos() {
     # Export APPDIS so nix-shell can see it
     export APPDIS
 
+    # For wmclient apps (acme), run through wm.dis with the app as initial command
+    # This ensures plumber is started via wmsetup before the app runs
+    if is_wmclient_app; then
+        exec nix-shell --run "
+            export PATH=\"$ROOT/Linux/amd64/bin:$PATH\"
+            export ROOT=\"$ROOT\"
+            cd \"$ROOT\"
+            # Run WM with acme as the initial command (wm will start plumber first)
+            exec Linux/amd64/bin/emu -r \"$ROOT\" /dis/wm/wm.dis acme $args
+        "
+    fi
+
+    # For other apps, use wminit as before
     exec nix-shell --run "
         export PATH=\"$ROOT/Linux/amd64/bin:$PATH\"
         export ROOT=\"$ROOT\"
@@ -201,12 +262,26 @@ run_nixos() {
 # Function to run on OpenBSD
 run_openbsd() {
     export PATH="$ROOT/Linux/amd64/bin:$PATH"
+
+    # For wmclient apps (acme), run through wm.dis with the app as initial command
+    if is_wmclient_app; then
+        exec "$ROOT/Linux/amd64/bin/emu" -r "$ROOT" "/dis/wm/wm.dis" "acme" "$@"
+    fi
+
+    # For other apps, use wminit as before
     exec "$ROOT/Linux/amd64/bin/emu" -r "$ROOT" "/dis/wminit.dis" "${APPDIS#/dis/}" "$@"
 }
 
 # Function to run on generic Linux
 run_linux() {
     export PATH="$ROOT/Linux/amd64/bin:$PATH"
+
+    # For wmclient apps (acme), run through wm.dis with the app as initial command
+    if is_wmclient_app; then
+        exec "$ROOT/Linux/amd64/bin/emu" -r "$ROOT" "/dis/wm/wm.dis" "acme" "$@"
+    fi
+
+    # For other apps, use wminit as before
     exec "$ROOT/Linux/amd64/bin/emu" -r "$ROOT" "/dis/wminit.dis" "${APPDIS#/dis/}" "$@"
 }
 
