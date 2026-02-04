@@ -1,18 +1,17 @@
 implement Syntax;
 
 include "sys.m";
-include "draw.m";
-include "bufio.m";
 include "env.m";
-include "dat.m";
+include "syntax.m";
 
 sys : Sys;
-drawm : Draw;
-bufio : Bufio;
 env : Env;
 
-# Token type constants
-TKWD, TSTR, TCHR, TNUM, TCOM, TTYPE, TFN, TOP, TPRE, TID : con iota;
+init()
+{
+	sys = load Sys Sys->PATH;
+	env = load Env Env->PATH;
+}
 
 # Extension mapping ADT
 Extmap : adt {
@@ -34,130 +33,13 @@ extmap := array[] of {
 	Extmap(".sh", "shell"),
 };
 
-init(mods : ref Dat->Mods)
+# Check if syntax highlighting is enabled
+enabled() : int
 {
-	sys = mods.sys;
-	drawm = mods.draw;
-	bufio = mods.bufio;
-	env = mods.env;
-}
-
-# Initialize display reference
-display : ref Draw->Display;
-
-initdisplay(d : ref Draw->Display)
-{
-	display = d;
-}
-
-# Token type to color name mapping
-tokennames := array[] of {
-	"keyword",
-	"string",
-	"char",
-	"number",
-	"comment",
-	"type",
-	"function",
-	"operator",
-	"preprocessor",
-	"identifier",
-};
-
-# Current theme colors
-themecolors : array of ref Draw->Image;
-
-# Load theme from file or environment
-loadtheme(name : string) : int
-{
-	# Check environment variable syntax-theme first
-	theme := env->getenv("syntax-theme");
-	if (theme == nil)
-		theme = name;
-	if (theme == nil)
-		theme = "default";
-
-	# For MVP: use environment variables per token type
-	themecolors = array[len tokennames] of ref Draw->Image;
-	for (i := 0; i < len tokennames; i++) {
-		themecolors[i] = resolvecolor(tokennames[i], theme);
-	}
-	return 1;
-}
-
-# Resolve color from environment or use default
-resolvecolor(token : string, theme : string) : ref Draw->Image
-{
-	# Check syntax-lang-token or syntax-token
-	vars := array[] of {
-		"syntax-" + theme + "-" + token,
-		"syntax-" + token,
-	};
-	for (i := 0; i < len vars; i++) {
-		c := env->getenv(vars[i]);
-		if (c != nil) {
-			if (len c >= 7 && c[0] == '#') {
-				(r, g, b) := parsehex(c);
-				return drawm->Display.color((r<<24)|(g<<16)|(b<<8)|16rFF);
-			}
-			# Could look up named colors here
-		}
-	}
-
-	# Return default based on token type
-	return defaultcolor(token);
-}
-
-# Parse hex color #RRGGBB
-parsehex(c : string) : (int, int, int)
-{
-	i := 1;
-	if (len c >= 2 && c[i] == '0' && (c[i+1] == 'x' || c[i+1] == 'X'))
-		i += 2;
-
-	r := (hexval(c[i]) << 4) | hexval(c[i+1]);
-	g := (hexval(c[i+2]) << 4) | hexval(c[i+3]);
-	b := (hexval(c[i+4]) << 4) | hexval(c[i+5]);
-	return (r, g, b);
-}
-
-hexval(c : int) : int
-{
-	if (c >= '0' && c <= '9')
-		return c - '0';
-	if (c >= 'a' && c <= 'f')
-		return 10 + c - 'a';
-	if (c >= 'A' && c <= 'F')
-		return 10 + c - 'A';
-	return 0;
-}
-
-# Default color for each token type (from draw.h constants)
-defaultcolor(token : string) : ref Draw->Image
-{
-	disp := drawm->Display;
-	case token {
-	"keyword" => return disp.color(16r0000FFFF);
-	"string" => return disp.color(16r00FF00FF);
-	"char" => return disp.color(16r00FF00FF);
-	"number" => return disp.color(16rFF0000FF);
-	"comment" => return disp.color(16r888888FF);
-	"type" => return disp.color(16r800080FF);
-	"function" => return disp.color(16r006400FF);
-	"operator" => return disp.color(16r000088FF);
-	"preprocessor" => return disp.color(16r8B4513FF);
-	* => return disp.color(16r000000FF);
-	}
-}
-
-# Get color for token type
-getcolor(tokentype : int) : ref Draw->Image
-{
-	if (themecolors == nil)
-		loadtheme(nil);
-	if (tokentype >= 0 && tokentype < len themecolors)
-		return themecolors[tokentype];
-	return defaultcolor("identifier");
+	s := env->getenv("syntax-highlight");
+	if (s == nil)
+		s = env->getenv("syntax");
+	return (s != nil && s != "0");
 }
 
 # Detect language from filename and optional content
@@ -209,15 +91,6 @@ contains(s, substr : string) : int
 			return 1;
 	}
 	return 0;
-}
-
-# Check if syntax highlighting is enabled
-enabled() : int
-{
-	s := env->getenv("syntax-highlight");
-	if (s == nil)
-		s = env->getenv("syntax");
-	return (s != nil && s != "0");
 }
 
 # Get tokens for language
@@ -382,7 +255,7 @@ is_c_type(word : string) : int
 
 contains_pattern(pattern : string, word : string) : int
 {
-	parts := sys->tokenize(pattern, "|");
+	(n, parts) := sys->tokenize(pattern, "|");
 	for (; parts != nil; parts = tl parts) {
 		if (hd parts == word)
 			return 1;
@@ -418,7 +291,7 @@ tokenize_limbo(text : string, max : int) : array of (int, int, int)
 
 		start := i;
 
-		# Single line comment (# or //)
+		# Single line comment (# or #)
 		if (i+1 < n && ((text[i] == '/' && text[i+1] == '/') || text[i] == '#')) {
 			while (i < n && i < max && text[i] != '\n')
 				i++;

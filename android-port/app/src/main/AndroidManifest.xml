@@ -22,7 +22,6 @@
             android:exported="true"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:launchMode="singleTask"
-            android:screenOrientation="landscape"
             android:resizeableActivity="true">
 
             <!-- Tell NativeActivity which native library to load -->

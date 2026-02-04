@@ -185,6 +185,9 @@ osreboot(char *file, char **argv)
 
 /* Note: libinit and emuinit are defined below (Android-specific versions) */
 
+/* Forward declaration - modinit is defined in emu/Android/emu.c */
+extern void modinit(void);
+
 /* Emulator initialization - loads the Dis VM modules and starts execution */
 void
 emuinit(void *imod)
@@ -405,14 +408,7 @@ oscmdfree(void *cmd)
  */
 char** rebootargv = nil;
 
-int
-poolread(char *va, int count, uintptr offset)
-{
-	USED(va);
-	USED(count);
-	USED(offset);
-	return 0;
-}
+/* poolread is defined in emu/port/alloc.c */
 
 int
 cflag = 0;
@@ -596,7 +592,7 @@ release(Rendez *r)
 
 /* Root device table - defined in emu-g.root.h */
 /* Process monitoring */
-int memmonitor = 0;
+/* memmonitor is defined as a function pointer in emu/port/alloc.c */
 int progpid = 0;
 
 /* PC to disassembler - stub for profiling */
@@ -609,14 +605,7 @@ pc2dispc(uchar *pc, char *buf, int n)
 	return buf;
 }
 
-/* Pool size function */
-uintptr
-poolmsize(Pool *p, void *v)
-{
-	USED(p);
-	USED(v);
-	return 0;
-}
+/* poolmsize is defined in emu/port/alloc.c */
 
 /* Runtime functions */
 void
@@ -808,7 +797,7 @@ closesigs(Skeyset *s)
 }
 
 /* Root device - rootmaxq defined in emu-g.root.h */
-Memimage *imagmem = nil;
+/* Note: imagmem (Pool*) is defined in alloc.c, not Memimage* */
 
 /* Process creation */
 Proc*
@@ -1135,12 +1124,7 @@ char* panstr = nil;
 void** panics = nil;
 int npanics = 0;
 
-/* Memory allocation - small allocator */
-void*
-smalloc(uintptr n)
-{
-	return malloc(n);
-}
+/* smalloc is defined in emu/port/alloc.c */
 
 /* Jump buffer display for debugging */
 void
@@ -1447,26 +1431,7 @@ ftdoneface(Face *f)
 }
 
 /* Memory pool functions */
-/* poolchain is a function defined in pool.h */
-typedef struct Bhdr Bhdr;
-
-Bhdr*
-poolchain(Pool *p)
-{
-	USED(p);
-	return nil;
-}
-
-void
-poolfree(Pool *p, void *v)
-{
-	USED(p);
-	USED(v);
-	free(v);
-}
-
-/* Heap memory tracking */
-ulong heapmem = 0;
+/* poolchain and poolfree are defined in emu/port/alloc.c */
 
 /* Free dynamic data */
 void
@@ -1481,9 +1446,6 @@ killcomm(void *c)
 	USED(c);
 }
 
-/* Pool fault handler - function pointer */
-void (*poolfault)(void *, char *, uintptr) = nil;
-
 /* Error with format */
 void
 errorf(char *fmt, ...)
@@ -1497,13 +1459,7 @@ errorf(char *fmt, ...)
 }
 
 /* Pool allocate */
-void*
-poolalloc(Pool *p, uintptr size)
-{
-	USED(p);
-	USED(size);
-	return malloc(size);
-}
+/* poolalloc is defined in emu/port/alloc.c */
 
 /* Type constants for heap auditing */
 int TDisplay = 0;
@@ -1729,17 +1685,7 @@ enc16(char *out, int len, uchar *in, int n)
 }
 
 /* Pool memory region functions */
-void
-poolimmutable(void *v)
-{
-	USED(v);
-}
-
-void
-poolmutable(void *v)
-{
-	USED(v);
-}
+/* poolimmutable and poolmutable are defined in emu/port/alloc.c */
 
 /* Kernel write */
 s32
@@ -2557,12 +2503,7 @@ Bterm(Biobufhdr *bp)
 }
 
 /* Pool name */
-char*
-poolname(Pool *p)
-{
-	USED(p);
-	return "";
-}
+/* poolname is defined in emu/port/alloc.c */
 
 /* Tk string parsing */
 /* tkword is defined in libtk/parse.c */
@@ -2875,13 +2816,7 @@ tkstringsize(void *f, char *s, int n)
 	return 0;
 }
 
-/* Pool functions */
-void
-poolsetcompact(Pool *p, void (*fn)(void*, void*))
-{
-	USED(p);
-	USED(fn);
-}
+/* poolsetcompact is defined in emu/port/alloc.c */
 
 /* Tk more functions */
 void
@@ -3001,13 +2936,7 @@ tkfreecolcache(void *tk)
 	USED(tk);
 }
 
-/* Kernel malloc */
-void*
-kmalloc(uintptr size)
-{
-	USED(size);
-	return malloc(size);
-}
+/* kmalloc is defined in emu/port/alloc.c */
 
 /* Device table - defined in emu-g.c */
 /* Debug flag */
@@ -3025,6 +2954,77 @@ panic(char *fmt, ...)
 	/* Log and exit */
 	__android_log_print(ANDROID_LOG_FATAL, "TaijiOS", "PANIC: %s", buf);
 	abort();
+}
+
+/*
+ * sbrk - grow the data segment
+ * Implemented using mmap for Android (POSIX systems)
+ */
+void* sbrk(intptr increment)
+{
+	static void* current_brk = NULL;
+	static void* max_brk = NULL;
+	static pthread_mutex_t brk_lock = PTHREAD_MUTEX_INITIALIZER;
+	void* new_brk;
+	void* result;
+
+	pthread_mutex_lock(&brk_lock);
+
+	/* Initialize brk on first call */
+	if (current_brk == NULL) {
+		current_brk = mmap(NULL, 1*1024*1024, PROT_READ|PROT_WRITE,
+		                   MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+		if (current_brk == MAP_FAILED) {
+			pthread_mutex_unlock(&brk_lock);
+			return (void*)-1;
+		}
+		max_brk = (char*)current_brk + 1*1024*1024;
+	}
+
+	if (increment == 0) {
+		result = current_brk;
+		pthread_mutex_unlock(&brk_lock);
+		return result;
+	}
+
+	if (increment < 0) {
+		/* shrinking */
+		new_brk = (char*)current_brk + increment;
+		if (new_brk < (char*)max_brk - 1*1024*1024) {
+			pthread_mutex_unlock(&brk_lock);
+			return (void*)-1;  /* Can't shrink below original */
+		}
+		result = current_brk;
+		current_brk = new_brk;
+		pthread_mutex_unlock(&brk_lock);
+		return result;
+	}
+
+	/* growing */
+	new_brk = (char*)current_brk + increment;
+	if (new_brk > max_brk) {
+		/* Need to expand the mapped region */
+		size_t cur_size = (char*)max_brk - (char*)current_brk;
+		size_t new_size = cur_size + increment + 256*1024;  /* Add extra buffer */
+		void* new_region = mremap(current_brk, cur_size, new_size, MREMAP_MAYMOVE);
+		if (new_region == MAP_FAILED) {
+			pthread_mutex_unlock(&brk_lock);
+			return (void*)-1;
+		}
+		/* Update pointers if mremap moved the region */
+		if (new_region != current_brk) {
+			ptrdiff_t offset = (char*)new_region - (char*)current_brk;
+			current_brk = (char*)current_brk + offset;
+			max_brk = (char*)max_brk + offset;
+		}
+		max_brk = (char*)current_brk + new_size;
+		new_brk = (char*)current_brk + increment;
+	}
+
+	result = current_brk;
+	current_brk = new_brk;
+	pthread_mutex_unlock(&brk_lock);
+	return result;
 }
 
 /* EG sign functions */

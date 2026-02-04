@@ -88,7 +88,7 @@ set(LIB9_SOURCES
 	${LIB9}/errfmt.c
 	# errstr-posix.c - use os.c implementation instead
 	${LIB9}/rerrstr.c
-	${LIB9}/mallocz.c
+	# mallocz.c - excluded, use emu/port/alloc.c pool allocator instead
 	${LIB9}/seek.c
 	${LIB9}/readn.c
 	${LIB9}/create.c
@@ -198,8 +198,8 @@ file(GLOB_RECURSE LIBSEC_SOURCES
 list(FILTER LIBSEC_SOURCES EXCLUDE REGEX ".*port/.*")
 list(FILTER LIBSEC_SOURCES EXCLUDE REGEX ".*os\\.c")
 
-# Exclude problematic source files from emu/port
-list(FILTER EMU_PORT_SOURCES EXCLUDE REGEX ".*alloc.c")
+# libmemdraw/alloc.c has graphics-specific alloc functions, keep it
+# libdraw/alloc.c also has graphics-specific functions, keep it
 
 # Combine all sources
 set(TAIJIOS_SOURCES

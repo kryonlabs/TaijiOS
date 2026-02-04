@@ -35,7 +35,6 @@ Dat : module {
 		edit: Edit;
 		editlog: Editlog;
 		editcmd: Editcmd;
-		syntaxm: Syntax;
 	};
 
 	SZSHORT : con 2;

@@ -505,7 +505,7 @@ frinit(f : ref Frame, r : Rect, ft : ref Font, b : ref Image, cols : array of re
 	}
 	# Initialize syntax colors to default (text color)
 	# These will be set by Text module if syntax highlighting is enabled
-	for(i := 0; i < SYN_NCOL; i++)
+	for(i = 0; i < SYN_NCOL; i++)
 		f.syncols[i] = f.cols[TEXT];
 	frsetrects(f, r, b);
 	if (f.tick==nil && f.cols[BACK] != nil)

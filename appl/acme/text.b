@@ -17,7 +17,6 @@ filem : Filem;
 columnm : Columnm;
 windowm : Windowm;
 exec : Exec;
-syntaxm : Syntax;
 
 Dir, sprint : import sys;
 frgetmouse : import acme;
@@ -122,7 +121,6 @@ init(mods : ref Dat->Mods)
 	columnm = mods.columnm;
 	windowm = mods.windowm;
 	exec = mods.exec;
-	syntaxm = mods.syntaxm;
 }
 
 TABDIR : con 3;	# width of tabs in directory windows
@@ -159,13 +157,6 @@ Text.init(t : self ref Text, f : ref File, r : Rect, rf : ref Dat->Reffont, cols
 	t.tabstop = dat->maxtab;
 	for(i:=0; i<Framem->NCOL; i++)
 		t.frame.cols[i] = cols[i];
-	# Initialize syntax colors from Syntax module
-	if(syntaxm != nil && syntaxm->enabled()){
-		syntaxm->loadtheme(nil);
-		for(i = 0; i < Framem->SYN_NCOL; i++){
-			t.frame.syncols[i] = syntaxm->getcolor(i);
-		}
-	}
 	t.redraw(r, rf.f, mainwin, -1);
 }
 

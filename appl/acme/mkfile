@@ -84,7 +84,7 @@ install:V:	$ROOT/dis/acme.dis
 $ROOT/dis/acme.dis:	acme.dis
 	rm -f $target && cp acme.dis $target
 
-acme.dis:	$MODULES $SYS_MODULES /dis/lib/syntax.dis
+acme.dis:	$MODULES $SYS_MODULES
 
 nuke:V:
 	rm -f $ROOT/dis/acme.dis

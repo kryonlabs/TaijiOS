@@ -3,6 +3,10 @@
 #include "interp.h"
 #include "error.h"
 
+/* Forward declarations for functions used before definition */
+extern void setmalloctag(void*, uintptr);
+extern void setrealloctag(void*, uintptr);
+
 enum
 {
 	MAXPOOL		= 4
@@ -631,7 +635,7 @@ kmalloc(uintptr size)
 
 /* this function signature is tied to the system's libc.h */
 void*
-malloc(ulong size)
+malloc(size_t size)
 {
 	void *v;
 
@@ -642,14 +646,14 @@ malloc(ulong size)
 		setrealloctag(v, 0);
 		memset(v, 0, size);
 		MM(0, getcallerpc(&size), v, size);
-	} else 
+	} else
 		print("malloc failed from %zx\n", getcallerpc(&size));
 	return v;
 }
 
 /* this function signature is tied to the system's libc.h */
 void*
-mallocz(ulong size, int clr)
+mallocz(size_t size, int clr)
 {
 	void *v;
 
@@ -681,7 +685,7 @@ free(void *v)
 
 /* this function signature is tied to the system's libc.h */
 void*
-realloc(void *v, ulong size)
+realloc(void *v, size_t size)
 {
 	void *nv;
 
@@ -743,7 +747,7 @@ getrealloctag(void *v)
 	return b->reallocpc;
 }
 
-ulong
+size_t
 msize(void *v)
 {
 	if(v == nil)
@@ -753,7 +757,7 @@ msize(void *v)
 
 /* this function signature is tied to the system's libc.h */
 void*
-calloc(ulong n, ulong szelem)
+calloc(size_t n, size_t szelem)
 {
 	return malloc(n*szelem);
 }
