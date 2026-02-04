@@ -5,8 +5,6 @@ TARG=kryon.dis
 MODULES=\
 	ast.m\
 	lexer.m\
-	parser.m\
-	codegen.m\
 
 SYSMODULES=\
 	sys.m\
@@ -16,6 +14,3 @@ SYSMODULES=\
 DISBIN=$ROOT/dis
 
 <$ROOT/mkfiles/mkdis
-
-install:V:
-	rm -f $DISBIN/kryon.dis && cp kryon.dis $DISBIN/kryon.dis

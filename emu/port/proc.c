@@ -12,6 +12,7 @@ newproc(void)
 	if(p == nil)
 		return nil;
 
+	memset(p, 0, sizeof(Proc));  /* Zero all fields to prevent garbage */
 	p->type = Unknown;
 	p->killed = 0;
 	p->swipend = 0;

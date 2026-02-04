@@ -138,4 +138,10 @@ Ast: module
     code_block_list_add: fn(listhd: ref CodeBlock, item: ref CodeBlock): ref CodeBlock;
     component_list_add: fn(listhd: ref ComponentDef, item: ref ComponentDef): ref ComponentDef;
     param_list_add: fn(listhd: ref Param, item: ref Param): ref Param;
+
+    # Value helper functions - safe field access for pick ADT
+    value_get_string: fn(v: ref Value): string;
+    value_get_number: fn(v: ref Value): big;
+    value_get_color: fn(v: ref Value): string;
+    value_get_ident: fn(v: ref Value): string;
 };

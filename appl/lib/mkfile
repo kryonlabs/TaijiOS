@@ -166,7 +166,6 @@ MODULES=
 
 SYSMODULES= \
 	bufio.m\
-	syntax.m\
 	cci.m\
 	daytime.m\
 	db.m\

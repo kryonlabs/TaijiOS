@@ -226,3 +226,33 @@ param_list_add(listhd: ref Param, item: ref Param): ref Param
     p.next = item;
     return listhd;
 }
+
+# Value helper functions - safe field access for pick ADT
+
+value_get_string(v: ref Value): string
+{
+    if (v == nil || v.valtype != VALUE_STRING)
+        return "";
+    return v.String.string_val;
+}
+
+value_get_number(v: ref Value): big
+{
+    if (v == nil || v.valtype != VALUE_NUMBER)
+        return big 0;
+    return v.Number.number_val;
+}
+
+value_get_color(v: ref Value): string
+{
+    if (v == nil || v.valtype != VALUE_COLOR)
+        return "";
+    return v.Color.color_val;
+}
+
+value_get_ident(v: ref Value): string
+{
+    if (v == nil || v.valtype != VALUE_IDENTIFIER)
+        return "";
+    return v.Identifier.ident_val;
+}

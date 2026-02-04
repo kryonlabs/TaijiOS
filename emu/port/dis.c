@@ -144,6 +144,7 @@ newprog(Prog *p, Modlink *m)
 		else
 			error(exNomem);
 	}
+	memset(n, 0, sizeof(Prog)+sizeof(Osenv));  /* Zero all fields to prevent garbage */
 
 	n->pid = ++pidnum;
 	if(n->pid <= 0)

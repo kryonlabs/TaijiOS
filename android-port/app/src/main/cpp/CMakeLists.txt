@@ -1,5 +1,6 @@
 # CMakeLists.txt for TaijiOS Android app
 # Compiles TaijiOS emulator with full graphics support (Phase 2 COMPLETE)
+# Force rebuild - 2025-02-04
 
 cmake_minimum_required(VERSION 3.22.1)
 project("taijos-android")

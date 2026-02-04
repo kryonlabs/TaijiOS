@@ -40,6 +40,7 @@ newframe() : ref Frame
 {
 	f := ref nullframe;
 	f.cols = array[NCOL] of ref Draw->Image;
+	f.syncols = array[SYN_NCOL] of ref Draw->Image;
 	return f;
 }
 
