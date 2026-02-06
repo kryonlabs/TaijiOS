@@ -1,0 +1,87 @@
+# Dockerfile to simulate GitHub Actions build environment
+FROM ubuntu:24.04
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    make \
+    binutils \
+    coreutils \
+    bash \
+    perl \
+    linux-headers-generic \
+    libx11-dev \
+    libxext-dev \
+    wget \
+    imagemagick \
+    fuse \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /taijios
+
+# Copy project files
+COPY . .
+
+# Build script
+RUN echo "#!/bin/bash\n\
+set -e\n\
+export ROOT=\"\$(pwd)\"\n\
+export PATH=\"\$ROOT/Linux/amd64/bin:\$PATH\"\n\
+\n\
+# Bootstrap mk\n\
+SYSTARG=Linux\n\
+OBJTYPE=amd64\n\
+PLAT=\$ROOT/\$SYSTARG/\$OBJTYPE\n\
+CC=\"gcc -c -I\$PLAT/include -I\$ROOT/include -I\$ROOT/utils/include\"\n\
+LD=\"gcc\"\n\
+AR=\"ar crvs\"\n\
+RANLIB=\":\"\n\
+\n\
+mkdir -p \$PLAT/lib \$PLAT/bin\n\
+\n\
+# Build libregexp\n\
+cd \$ROOT/utils/libregexp\n\
+\$CC regaux.c regcomp.c regerror.c regexec.c regsub.c rregexec.c rregsub.c\n\
+\$AR \$PLAT/lib/libregexp.a *.o\n\
+\n\
+# Build libbio\n\
+cd \$ROOT/libbio\n\
+\$CC bbuffered.c bfildes.c bflush.c bgetc.c bgetd.c bgetrune.c binit.c \\\
+   boffset.c bprint.c bputc.c bputrune.c brdline.c brdstr.c bread.c \\\
+   bseek.c bvprint.c bwrite.c\n\
+\$AR \$PLAT/lib/libbio.a *.o\n\
+\n\
+# Build lib9\n\
+cd \$ROOT/lib9\n\
+\$CC argv0.c charstod.c cleanname.c create.c dirstat-posix.c dirwstat.c \\\
+   dofmt.c dorfmt.c errfmt.c errstr-posix.c exits.c fcallfmt.c fltfmt.c \\\
+   fmt.c fmtfd.c fmtlock.c fmtprint.c fmtquote.c fmtrune.c fmtstr.c \\\
+   fmtvprint.c fprint.c getfields.c getuser-posix.c isnan-posix.c \\\
+   mallocz.c nulldir.c pow10.c print.c qsort.c rerrstr.c rune.c \\\
+   runeseprint.c runesmprint.c runesnprint.c runestrlen.c runevseprint.c \\\
+   sbrk-posix.c seprint.c seek.c smprint.c snprint.c sprint.c strdup.c \\\
+   strecpy.c strtoll.c strtoull.c u16.c u32.c u64.c utfecpy.c utflen.c \\\
+   utfnlen.c utfrrune.c utfrune.c vfprint.c vseprint.c vsmprint.c \\\
+   vsnprint.c\n\
+\$AR \$PLAT/lib/lib9.a *.o\n\
+\n\
+# Build mk\n\
+cd \$ROOT/utils/mk\n\
+\$CC Posix.c sh.c arc.c archive.c bufblock.c env.c file.c graph.c \\\
+   job.c lex.c main.c match.c mk.c parse.c recipe.c rule.c run.c \\\
+   shprint.c symtab.c var.c varsub.c word.c\n\
+\$LD -o mk *.o \$PLAT/lib/libregexp.a \$PLAT/lib/libbio.a \$PLAT/lib/lib9.a\n\
+cp mk \$PLAT/bin/\n\
+\n\
+echo \"Bootstrap complete\"\n\
+\n\
+# Build TaijiOS\n\
+cd \$ROOT\n\
+export PATH=\"\$ROOT/Linux/amd64/bin:\$PATH\"\n\
+mk && mk all\n\
+" > /build.sh && chmod +x /build.sh
+
+CMD ["/build.sh"]

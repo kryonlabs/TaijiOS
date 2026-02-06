@@ -29,11 +29,11 @@ jobs:
         with:
           path: |
             Linux/amd64
-            dis
-            module
-          key: ${{ runner.os }}-taijios-${{ hashFiles('mkfile', 'mkconfig', '**/*.mkfile', '**/mkfile', 'module/*.m') }}
+            # Remove 'dis' and 'module' from cache - dis contains compiled .dis files that can get stale
+            # and module contains source files that should not be cached
+          key: ${{ runner.os }}-taijios-v2-${{ hashFiles('mkfile', 'mkconfig', '**/*.mkfile', '**/mkfile', 'module/*.m') }}
           restore-keys: |
-            ${{ runner.os }}-taijios-
+            ${{ runner.os }}-taijios-v2-
 
       - name: Install build dependencies
         run: |
