@@ -113,8 +113,9 @@ jobs:
 
       - name: Build TaijiOS
         run: |
-          chmod +x run.sh
-          ./run.sh --build
+          export ROOT="$(pwd)"
+          export PATH="$ROOT/Linux/amd64/bin:$PATH"
+          mk && mk all
 
       - name: Build AppImage
         run: |

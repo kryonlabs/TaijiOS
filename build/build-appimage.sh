@@ -104,13 +104,8 @@ log_info "Step 1: Building TaijiOS..."
 # Change to ROOT directory to run the build
 cd "$ROOT"
 
-if [ -f "./run.sh" ]; then
-    chmod +x ./run.sh
-    ./run.sh --build
-else
-    log_error "run.sh not found. Cannot build TaijiOS."
-    exit 1
-fi
+export PATH="$ROOT/Linux/amd64/bin:$PATH"
+mk && mk all
 
 # Verify emu binary exists
 EMU_BIN="$ROOT/Linux/amd64/bin/emu"

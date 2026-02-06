@@ -1,16 +1,14 @@
 #!/bin/sh
-# TaijiOS build and run script
+# TaijiOS run script - launches the emulator
+# Use 'mk && mk all' to build first if needed
 
 cd "$(dirname "$0")"
 export ROOT="$(pwd)"
 export PATH="$ROOT/Linux/amd64/bin:$PATH"
 
-# Default to shell if no program specified
 if [ $# -eq 0 ]; then
     set -- dis/sh.dis
 fi
-
-mk && mk all
 
 # Set up namespace
 mkdir -p "$ROOT/tmp" "$ROOT/mnt" "$ROOT/n"
