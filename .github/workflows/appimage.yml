@@ -115,7 +115,7 @@ jobs:
         run: |
           export ROOT="$(pwd)"
           export PATH="$ROOT/Linux/amd64/bin:$PATH"
-          mk && mk install
+          mk mkdirs && mk && mk install
 
       - name: Build AppImage
         run: |
