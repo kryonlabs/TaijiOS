@@ -104,6 +104,24 @@ xprint(Prog *xp, void *vfp, void *vva, String *s1, char *buf, int n)
 				if(ss == H)
 					p = "";
 				else
+#ifdef __ANDROID__
+				/* Android fix: Don't modify read-only strings from bytecode.
+				 * Use precision specifier for length-limited printing */
+				if(ss->len < 0) {
+					f[-1] += 'A'-'a';
+					/* For Rune strings, use length-limited snprint.
+					 * %.<len>S prints only len characters without null terminator */
+					char rfmt[32];
+					snprint(rfmt, sizeof(rfmt), "%%.%dS", -ss->len);
+					b += snprint(b, eb-b, rfmt, ss->Srune);
+				}
+				else {
+					/* For ASCII strings, use precision specifier */
+					char afmt[32];
+					snprint(afmt, sizeof(afmt), "%%.%ds", ss->len);
+					b += snprint(b, eb-b, afmt, ss->Sascii);
+				}
+#else
 				if(ss->len < 0) {
 					f[-1] += 'A'-'a';
 					ss->Srune[-ss->len] = L'\0';
@@ -114,6 +132,7 @@ xprint(Prog *xp, void *vfp, void *vva, String *s1, char *buf, int n)
 					p = ss->Sascii;
 				}
 				b += snprint(b, eb-b, fmt, p);
+#endif
 				break;
 			case 'E':
 				f--;

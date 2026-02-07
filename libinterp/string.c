@@ -322,12 +322,20 @@ OP(cvtcw)
 	if(s == H)
 		W(d) = 0;
 	else
+#ifdef __ANDROID__
+	/* Android fix: Use string2c() which handles read-only strings */
+	if(s->len < 0)
+		W(d) = strtol(string2c(s), nil, 10);
+	else
+		W(d) = strtol(string2c(s), nil, 10);
+#else
 	if(s->len < 0)
 		W(d) = strtol(string2c(s), nil, 10);
 	else {
 		s->Sascii[s->len] = '\0';
 		W(d) = strtol(s->Sascii, nil, 10);
 	}
+#endif
 }
 
 OP(cvtcf)
@@ -338,12 +346,20 @@ OP(cvtcf)
 	if(s == H)
 		F(d) = 0.0;
 	else
+#ifdef __ANDROID__
+	/* Android fix: Use string2c() which handles read-only strings */
+	if(s->len < 0)
+		F(d) = strtod(string2c(s), nil);
+	else
+		F(d) = strtod(string2c(s), nil);
+#else
 	if(s->len < 0)
 		F(d) = strtod(string2c(s), nil);
 	else {
 		s->Sascii[s->len] = '\0';
 		F(d) = strtod(s->Sascii, nil);
 	}
+#endif
 }
 
 OP(cvtwc)
@@ -392,8 +408,22 @@ string2c(String *s)
 		return "";
 
 	if(s->len >= 0) {
+#ifdef __ANDROID__
+		/* Android fix: Strings from bytecode may be read-only.
+		 * Allocate tmp buffer instead of modifying in-place */
+		if(s->tmp == nil || msize(s->tmp) < s->len + 1) {
+			free(s->tmp);
+			s->tmp = malloc(s->len + 1);
+			if(s->tmp == nil)
+				return "";
+		}
+		memmove(s->tmp, s->Sascii, s->len);
+		s->tmp[s->len] = '\0';
+		return s->tmp;
+#else
 		s->Sascii[s->len] = '\0';
 		return s->Sascii;
+#endif
 	}
 
 	nc = -s->len;
