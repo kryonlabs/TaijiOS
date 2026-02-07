@@ -3,6 +3,7 @@
 #include "lib9.h"
 #include "isa.h"
 #include "interp.h"
+#include <stdint.h>  /* For uintptr_t - needed on all platforms */
 
 #ifdef __ANDROID__
 #include <android/log.h>
