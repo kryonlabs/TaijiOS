@@ -1,6 +1,7 @@
 <$ROOT/mkconfig
 
 KRYFILES=\
+	about.kry\
 	clock.kry\
 	date.kry\
 

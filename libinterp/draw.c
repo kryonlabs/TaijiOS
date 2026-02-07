@@ -2304,6 +2304,18 @@ doflush(Display *d)
 	if(n <= 0)
 		return 1;
 
+#ifdef __ANDROID__
+	/*
+	 * Android local display: datachan is nil, skip channel I/O.
+	 * Drawing commands are executed directly through the draw device
+	 * (devdraw.c) which writes to screenimage, and flushmemscreen()
+	 * in win.c composites wmclient windows and renders to OpenGL ES.
+	 */
+	if(d->local || d->datachan == nil) {
+		d->bufp = d->buf;
+		return 1;
+	}
+#endif
 	if(d->local == 0)
 		release();
 	if((m = kchanio(d->datachan, d->buf, n, OWRITE)) != n){

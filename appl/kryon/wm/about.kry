@@ -1,0 +1,26 @@
+use sys
+
+Window {
+    title = "About TaijiOS"
+    width = 300
+    height = 150
+    bg = "black"
+
+    Frame {
+        bg = "black"
+        borderwidth = 2
+        relief = "ridge"
+
+        Center {
+            Img {
+                bitmap = "@/icons/taijios.bit"
+            }
+            Label {
+                text = "TaijiOS"
+                fg = "#ff5500"
+                bg = "black"
+                font = "Helvetica 14 bold"
+            }
+        }
+    }
+}

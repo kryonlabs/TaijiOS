@@ -224,6 +224,7 @@ check_keyword(id: string): int
     if (id == "Column") return TOKEN_COLUMN;
     if (id == "Row") return TOKEN_ROW;
     if (id == "Center") return TOKEN_CENTER;
+    if (id == "Img") return TOKEN_IMG;
 
     return TOKEN_IDENTIFIER;
 }

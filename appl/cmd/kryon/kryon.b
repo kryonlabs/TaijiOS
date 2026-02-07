@@ -777,7 +777,7 @@ parse_widget_body_content(p: ref Parser): (ref Property, ref Widget, string)
             }
         }
         # Widget: Window/Frame/Button/etc { ... }
-        else if (tok.toktype >= Lexer->TOKEN_WINDOW && tok.toktype <= Lexer->TOKEN_CENTER) {
+        else if (tok.toktype >= Lexer->TOKEN_WINDOW && tok.toktype <= Lexer->TOKEN_IMG) {
             (child, err2) := parse_widget(p);
             if (err2 != nil) {
                 return (nil, nil, err2);
@@ -1036,6 +1036,20 @@ parse_message(p: ref Parser): (ref Widget, string)
     return (w, nil);
 }
 
+parse_img(p: ref Parser): (ref Widget, string)
+{
+    (body, err) := parse_widget_body(p);
+    if (err != nil) {
+        return (nil, err);
+    }
+
+    w := ast->widget_create(Ast->WIDGET_IMG);
+    w.props = body.props;
+    w.children = body.children;
+
+    return (w, nil);
+}
+
 # Parse a widget (dispatch based on type)
 parse_widget(p: ref Parser): (ref Widget, string)
 {
@@ -1086,6 +1100,9 @@ parse_widget(p: ref Parser): (ref Widget, string)
 
     Lexer->TOKEN_CENTER =>
         return parse_center(p);
+
+    Lexer->TOKEN_IMG =>
+        return parse_img(p);
 
     * =>
         return (nil, fmt_error(p, sys->sprint("unknown widget type token: %d", tok.toktype)));
@@ -1775,6 +1792,8 @@ widget_type_to_tk(typ: int): string
         return "frame";
     Ast->WIDGET_CENTER =>
         return "frame";
+    Ast->WIDGET_IMG =>
+        return "label";
     * =>
         return "frame";
     }

@@ -19,6 +19,7 @@ Ast: module
     WIDGET_COLUMN: con 14;
     WIDGET_ROW: con 15;
     WIDGET_CENTER: con 16;
+    WIDGET_IMG: con 17;
 
     # Value type constants
     VALUE_STRING: con 1;

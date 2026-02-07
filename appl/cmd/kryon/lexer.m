@@ -27,6 +27,7 @@ Lexer: module
     TOKEN_ROW: con 21;
     TOKEN_CENTER: con 22;
     TOKEN_ARROW: con 23;
+    TOKEN_IMG: con 24;
 
     # Token ADT - users need to access this
     Token: adt {

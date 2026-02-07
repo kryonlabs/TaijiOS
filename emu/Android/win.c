@@ -515,6 +515,13 @@ android_initdisplay(void (*error)(Display*, char*))
 	disp->bufsize = Displaybufsize;
 	disp->bufp = disp->buf;
 	disp->qlock = q;
+	/*
+	 * Set dataqid to a non-zero QID path that identifies this display.
+	 * This is used by drawlsetrefresh() to find the client.
+	 * Format: (slot_number << QSHIFT) | Qdata
+	 * QSHIFT=4, Qdata=6, so for slot 1: (1 << 4) | 6 = 22
+	 */
+	disp->dataqid = (1 << 4) | 6;
 
 	/* Initialize limbo pointer for reference counting
 	 * This is required by mkdrawimage and other functions.

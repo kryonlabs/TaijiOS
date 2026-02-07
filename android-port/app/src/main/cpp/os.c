@@ -325,16 +325,16 @@ emuinit(void *imod)
 	LOGI("emuinit: Module initialization complete");
 
 	/* Load and run a simple Dis module from assets */
-	/* Try clock first - user requested to test it */
+	/* Skip clock - it uses wmclient and crashes on xprint */
 	static const char* test_modules[] = {
-		"dis/clock.dis",       /* Clock application - user requested */
-		"dis/testsimple.dis",  /* Has Sys_print calls that log to Android */
+		"dis/testsimple.dis",  /* Simple test without Draw */
 		"dis/testload.dis",    /* Minimal Draw module test */
 		"dis/minimal.dis",     /* GUI test with button */
 		"dis/testprint.dis",
 		"dis/testnobox.dis",
 		"dis/testsleep.dis",
 		"dis/testwm.dis",
+		"dis/clock.dis",       /* Clock application - crashes on xprint */
 		"dis/hello.dis",
 		NULL
 	};

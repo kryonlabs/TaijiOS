@@ -1,0 +1,6 @@
+Window {
+    title = "Test"
+    Img {
+        bitmap = "test.bit"
+    }
+}
