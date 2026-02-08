@@ -1836,13 +1836,22 @@ void Sys_fprint(void *fp)
 	F_Sys_fprint *f;
 
 	f = fp;
+
+	/* DEBUG: Log the string pointer for crash investigation */
+	static int fprint_count = 0;
+	if(fprint_count < 10) {
+		LOGI("Sys_fprint: call %d, f->s=%p", fprint_count, f->s);
+		if(f->s != H) {
+			LOGI("  f->s->len=%d", f->s->len);
+		}
+		fprint_count++;
+	}
+
 	p = currun();
 	release();
 	n = xprint(p, f, &f->vargs, f->s, buf, sizeof(buf));
 	if (n >= sizeof(buf)-UTFmax-2)
 		n = bigxprint(p, f, &f->vargs, f->s, &b, sizeof(buf));
-
-	/* Logging DISABLED FOR DEBUGGING */
 
 	*f->ret = n;
 	acquire();
@@ -2654,14 +2663,49 @@ void* sbrk(intptr_t increment)
 
 	/* Initialize brk on first call */
 	if (current_brk == NULL) {
-		current_brk = mmap(NULL, 16*1024*1024, PROT_READ|PROT_WRITE,
+		/*
+		 * CRITICAL FIX for Android 10+ ARM64:
+		 * Allocate heap with PROT_READ|PROT_WRITE|PROT_EXEC
+		 * to allow JIT-compiled code execution. Without PROT_EXEC,
+		 * the Dis VM will crash with SIGSEGV (SEGV_ACCERR) when
+		 * trying to execute JIT-compiled code.
+		 *
+		 * Note: Android's SELinux may restrict executable memory,
+		 * but MAP_ANONYMOUS with PROT_EXEC should work for app processes.
+		 *
+		 * Use 64MB heap to avoid mremap which loses PROT_EXEC
+		 */
+		current_brk = mmap(NULL, 64*1024*1024, PROT_READ|PROT_WRITE|PROT_EXEC,
 		                   MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 		if (current_brk == MAP_FAILED) {
-			pthread_mutex_unlock(&brk_lock);
-			return (void*)-1;
+			LOGE("sbrk: mmap with PROT_EXEC failed, trying without EXEC");
+			/* Fallback: try without EXEC - may crash on JIT */
+			current_brk = mmap(NULL, 64*1024*1024, PROT_READ|PROT_WRITE,
+			                   MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+			if (current_brk == MAP_FAILED) {
+				pthread_mutex_unlock(&brk_lock);
+				return (void*)-1;
+			}
+			/* Try to add EXEC after initial mmap */
+			if (mprotect(current_brk, 64*1024*1024, PROT_READ|PROT_WRITE|PROT_EXEC) != 0) {
+				LOGE("sbrk: mprotect PROT_EXEC also failed errno=%d", errno);
+			} else {
+				LOGI("sbrk: mprotect PROT_EXEC succeeded");
+			}
+		} else {
+			LOGI("sbrk: mmap with PROT_EXEC succeeded");
 		}
-		max_brk = (char*)current_brk + 16*1024*1024;
-		LOGI("sbrk: initialized heap at %p, max %p", current_brk, max_brk);
+		max_brk = (char*)current_brk + 64*1024*1024;
+		LOGI("sbrk: initialized heap at %p, max %p (64MB)", current_brk, max_brk);
+
+		/* CRITICAL: Test write to ensure heap is writable */
+		*(int*)current_brk = 0x12345678;
+		if(*(int*)current_brk != 0x12345678) {
+			LOGE("sbrk: Heap write test FAILED!");
+		} else {
+			LOGI("sbrk: Heap write test OK");
+		}
+		*(int*)current_brk = 0;  /* Restore */
 	}
 
 	if (increment == 0) {
@@ -2673,7 +2717,8 @@ void* sbrk(intptr_t increment)
 	if (increment < 0) {
 		/* shrinking */
 		new_brk = (char*)current_brk + increment;
-		if (new_brk < (char*)max_brk - 16*1024*1024) {
+		/* Don't shrink below 64MB base */
+		if (new_brk < (char*)max_brk - 64*1024*1024) {
 			pthread_mutex_unlock(&brk_lock);
 			return (void*)-1;  /* Can't shrink below original */
 		}
@@ -2700,6 +2745,13 @@ void* sbrk(intptr_t increment)
 			ptrdiff_t offset = (char*)new_region - (char*)current_brk;
 			current_brk = (char*)current_brk + offset;
 			max_brk = (char*)max_brk + offset;
+		}
+		/*
+		 * CRITICAL FIX: mremap doesn't preserve PROT_EXEC on Android
+		 * We need to re-apply PROT_EXEC to the entire region
+		 */
+		if (mprotect(current_brk, new_size, PROT_READ|PROT_WRITE|PROT_EXEC) != 0) {
+			LOGE("sbrk: mprotect PROT_EXEC failed after mremap");
 		}
 		max_brk = (char*)current_brk + new_size;
 		new_brk = (char*)current_brk + increment;

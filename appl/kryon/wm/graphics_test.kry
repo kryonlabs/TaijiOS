@@ -1,0 +1,40 @@
+# Graphics API Test - Simple bouncing ball with Canvas
+
+Window {
+    title = "Graphics Test"
+    width = 400
+    height = 400
+    type = Appl
+
+    Canvas {
+        onDraw = animate @ 30000
+    }
+}
+
+var ballX: int = 200
+var ballY: int = 200
+var dx: int = 3
+var dy: int = 2
+
+fn animate(ctx: Graphics, t: int) {
+    # Update ball position
+    ballX = ballX + dx
+    ballY = ballY + dy
+
+    # Bounce off walls
+    if (ballX < 20 || ballX > 380) {
+        dx = -dx
+    }
+    if (ballY < 20 || ballY > 380) {
+        dy = -dy
+    }
+
+    # Clear screen with light blue
+    ctx.clear(Color.paleblue)
+
+    # Set fill color to red
+    ctx.fill(Color.red)
+
+    # Draw circle at ball position
+    ctx.circle(ballX, ballY, 20)
+}

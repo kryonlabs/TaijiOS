@@ -1,5 +1,4 @@
 use math
-use rand
 
 # Type declarations for bouncing balls
 struct Realpoint {
@@ -17,30 +16,9 @@ const BALLSIZE = 4
 const ZERO = 1e-6
 
 # Global state
-var back: ref Image
-var lineColor: ref Image
-var ballColors: ref Image[]
 var lines: list of Line
 var drawing: int = 0
 var lineStart: Realpoint
-
-fn initColors(display: ref Display) {
-    back = display.colormix(Draw->Palebluegreen, Draw->White);
-    lineColor = display.newimage(Rect((0,0),(1,1)), Draw->CMAP8, 1, Draw->Black);
-
-    # Initialize ball colors
-    ballColors = array[8] of ref Image;
-    for (var i: int = 0; i < 8; i++) {
-        ballColors[i] = display.newimage(Rect((0,0),(1,1)), Draw->CMAP8, 1,
-            display.rgb((255-i*20), (100+i*10), (150+i*15)));
-    }
-
-    # Add boundary lines
-    lines = Line(Realpoint(0.0, 0.0), Realpoint(400.0, 0.0)) :: lines;
-    lines = Line(Realpoint(400.0, 0.0), Realpoint(400.0, 400.0)) :: lines;
-    lines = Line(Realpoint(400.0, 400.0), Realpoint(0.0, 400.0)) :: lines;
-    lines = Line(Realpoint(0.0, 400.0), Realpoint(0.0, 0.0)) :: lines;
-}
 
 # Physics functions
 fn makeunit(v: Realpoint): Realpoint {
@@ -72,25 +50,20 @@ fn handleMouseMove(x: int, y: int) {
     # Track mouse movement while drawing
 }
 
-# Main animation callback
-fn animate(screen: ref Image, t: int) {
-    if (screen == nil) { return; }
-    screen.draw(screen.r, back, nil, ZP);
+# Main animation callback using Graphics API
+fn animate(ctx: Graphics, t: int) {
+    # Clear screen with light blue background
+    ctx.clear("#d4f7f4")
+
+    # Set stroke color for lines
+    ctx.stroke(Color.black)
+    ctx.setlinewidth(3)
 
     # Draw lines
     for (var ls: list of Line = lines; ls != nil; ls = tl ls) {
         l: Line = hd ls;
-        p1: Point = Point(int l.p1.x, int l.p1.y);
-        p2: Point = Point(int l.p2.x, int l.p2.y);
-        screen.line(p1, p2, 0, 0, 3, lineColor, ZP);
+        ctx.line(int l.p1.x, int l.p1.y, int l.p2.x, int l.p2.y);
     }
-
-    # Draw current line being drawn
-    if (drawing) {
-        # Would need current mouse position - not available in this callback
-    }
-
-    screen.flush(Draw->Flushnow);
 }
 
 # Window declaration
@@ -100,8 +73,10 @@ Window {
     height = 400
     type = Appl
 
-    onInit = initColors
-    onDraw = animate @ 30000
+    Canvas {
+        onDraw = animate @ 30000
+    }
+
     onMouseDown = handleMouseDown
     onMouseUp = handleMouseUp
     onMouseMove = handleMouseMove

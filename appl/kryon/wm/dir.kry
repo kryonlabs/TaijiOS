@@ -1,0 +1,156 @@
+// Kryon File Manager - Phase 2
+
+use sys
+
+var currentPath: string
+
+fn initVars() {
+    currentPath = "root"
+}
+
+fn onIconView() {
+    sys->print("Icon view selected\n")
+}
+
+fn onListView() {
+    sys->print("List view selected\n")
+}
+
+fn onUpClick() {
+    sys->print("Navigate up from: %s\n", currentPath)
+}
+
+fn onRefresh() {
+    sys->print("Refresh: %s\n", currentPath)
+}
+
+fn onFileSelect() {
+    sys->print("File selected\n")
+}
+
+fn onNewFolder() {
+    sys->print("Create new folder\n")
+}
+
+fn onDelete() {
+    sys->print("Delete selected\n")
+}
+
+Window {
+    title = "File Manager"
+    width = 700
+    height = 500
+    bg = "#f0f0f0"
+    type = Appl
+    
+    Column {
+        Frame {
+            bg = "#e0e0e0"
+            height = 40
+            borderwidth = 1
+            relief = "raised"
+            
+            Row {
+                Button {
+                    text = "New"
+                    bg = "#d0d0d0"
+                    width = 8
+                    onClick = onNewFolder
+                }
+                Button {
+                    text = "Delete"
+                    bg = "#d0d0d0"
+                    width = 8
+                    onClick = onDelete
+                }
+                Button {
+                    text = "Icon"
+                    bg = "#d0d0d0"
+                    width = 8
+                    onClick = onIconView
+                }
+                Button {
+                    text = "List"
+                    bg = "#d0d0d0"
+                    width = 8
+                    onClick = onListView
+                }
+                Button {
+                    text = "Refresh"
+                    bg = "#d0d0d0"
+                    width = 10
+                    onClick = onRefresh
+                }
+            }
+        }
+        
+        Frame {
+            bg = "white"
+            borderwidth = 2
+            relief = "sunken"
+            
+            Column {
+                Frame {
+                    bg = "#e8e8e8"
+                    height = 25
+                    borderwidth = 1
+                    relief = "raised"
+                    
+                    Row {
+                        Label {
+                            text = "Name"
+                            fg = "black"
+                            bg = "#e8e8e8"
+                            width = 40
+                            font = "Helvetica 10 bold"
+                        }
+                        Label {
+                            text = "Size"
+                            fg = "black"
+                            bg = "#e8e8e8"
+                            width = 12
+                            font = "Helvetica 10 bold"
+                        }
+                        Label {
+                            text = "Type"
+                            fg = "black"
+                            bg = "#e8e8e8"
+                            width = 12
+                            font = "Helvetica 10 bold"
+                        }
+                    }
+                }
+                
+                Listbox {
+                    width = 80
+                    height = 20
+                    bg = "white"
+                    onSelected = onFileSelect
+                }
+            }
+        }
+        
+        Frame {
+            bg = "#d0d0d0"
+            height = 35
+            borderwidth = 1
+            relief = "raised"
+            
+            Row {
+                Label {
+                    text = currentPath
+                    fg = "black"
+                    bg = "#d0d0d0"
+                    width = 60
+                    font = "Helvetica 9"
+                }
+                Button {
+                    text = "Up"
+                    bg = "#c0c0c0"
+                    width = 6
+                    onClick = onUpClick
+                }
+            }
+        }
+    }
+}

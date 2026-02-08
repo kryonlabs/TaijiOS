@@ -7,6 +7,7 @@ KRYFILES=\
 	bounce.kry\
 	clock.kry\
 	date.kry\
+	dir.kry\
 
 BFILES=${KRYFILES:%.kry=%.b}
 

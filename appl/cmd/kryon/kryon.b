@@ -2013,11 +2013,20 @@ parse_program(p: ref Parser): (ref Program, string)
             }
             prog.app = app;
 
-            # Check if we should use Draw backend (has onDraw property)
+            # Check if we should use Draw backend
+            # 1. Window has onDraw property (old behavior)
+            # 2. Window contains Canvas widgets (new)
             if (app.props != nil) {
                 if (has_property(app.props, "onDraw"))
                     prog.window_type = 1;  # Draw backend
             }
+
+            # Check for Canvas widgets in the body
+            if (prog.window_type != 1 && app.body != nil) {
+                if (has_canvas_widget(app.body))
+                    prog.window_type = 1;  # Draw backend
+            }
+
             break;  # Window is the last thing in the file
         }
         # Check for reactive function (identifier followed by ':')
@@ -2042,6 +2051,13 @@ parse_program(p: ref Parser): (ref Program, string)
     parse_err = check_undefined_variables(prog);
     if (parse_err != nil)
         return (nil, parse_err);
+
+    # After all parsing, check if we should use Draw backend due to Graphics API usage
+    # (this is done after all functions are parsed)
+    if (prog.window_type != 1 && prog.app != nil) {
+        if (needs_graphics_module(prog))
+            prog.window_type = 1;  # Draw backend
+    }
 
     return (prog, nil);
 }
@@ -2542,6 +2558,16 @@ limbo_escape(s: string): string
 # Graphics API transformation functions
 # =========================================================================
 
+# Find character position in string (returns -1 if not found)
+strfind(s: string, c: int, start: int): int
+{
+    for (i := start; i < len s; i++) {
+        if (s[i] == c)
+            return i;
+    }
+    return -1;
+}
+
 # Check if expression is a Graphics method call (e.g., ctx.clear("#fff"))
 # Returns (is_graphics_call, transformed_expression, color_declarations)
 transform_graphics_call(expr: string): (int, string, string)
@@ -2549,81 +2575,60 @@ transform_graphics_call(expr: string): (int, string, string)
     if (expr == nil || len expr == 0)
         return (0, expr, "");
 
-    # Trim leading/trailing whitespace
-    start := 0;
-    while (start < len expr && (expr[start] == ' ' || expr[start] == '\t'))
-        start++;
+    # Use a simpler pattern matching approach
+    # Look for ctx.method( pattern
 
-    end := len expr;
-    while (end > 0 && (expr[end-1] == ' ' || expr[end-1] == '\t' || expr[end-1] == '\n'))
-        end--;
-
-    if (start >= end)
-        return (0, expr, "");
-
-    trimmed := expr[start:end];
-
-    # Check for pattern: identifier.method(arguments)
-    # Graphics methods: clear, fill, stroke, rect, circle, ellipse, line, text, setlinewidth
-
-    # Find the first '.' to check for method call
-    dot_pos := -1;
-    for (i = 0; i < len trimmed; i++) {
-        if (trimmed[i] == '.') {
-            dot_pos = i;
+    # Find "ctx." prefix
+    ctx_pos := 0;
+    found := 0;
+    i := 0;
+    for (i = 0; i < len expr - 4; i++) {
+        if (expr[i] == 'c' && expr[i+1] == 't' && expr[i+2] == 'x' && expr[i+3] == '.') {
+            ctx_pos = i;
+            found = 1;
             break;
         }
     }
 
-    if (dot_pos <= 0 || dot_pos >= len trimmed - 1)
+    if (!found)
         return (0, expr, "");
 
-    obj := trimmed[0:dot_pos];
-    rest := trimmed[dot_pos+1:];
-
-    # Check if object is 'ctx' or similar
-    is_ctx := (obj == "ctx");
-
-    if (!is_ctx)
+    # Find method name (characters after "ctx." until "(")
+    method_start := ctx_pos + 4;
+    paren_pos := strfind(expr, '(', method_start);
+    if (paren_pos < 0)
         return (0, expr, "");
 
-    # Find method name and arguments
-    method := "";
-    args := "";
+    method := expr[method_start:paren_pos];
 
-    # Find opening parenthesis
-    paren_pos := -1;
-    for (i = 0; i < len rest; i++) {
-        if (rest[i] == '(') {
-            method = rest[0:i];
-            # Find matching closing parenthesis
-            depth := 1;
-            arg_start := i + 1;
-            for (j := i + 1; j < len rest; j++) {
-                if (rest[j] == '(')
-                    depth++;
-                else if (rest[j] == ')') {
-                    depth--;
-                    if (depth == 0) {
-                        args = rest[arg_start:j];
-                        break;
-                    }
-                }
+    # Find matching closing parenthesis
+    depth := 1;
+    arg_start := paren_pos + 1;
+    arg_end := -1;
+    for (i = arg_start; i < len expr; i++) {
+        if (expr[i] == '(')
+            depth++;
+        else if (expr[i] == ')') {
+            depth--;
+            if (depth == 0) {
+                arg_end = i;
+                break;
             }
-            break;
         }
     }
 
-    if (method == nil || len method == 0)
+    if (arg_end < 0)
         return (0, expr, "");
+
+    args := expr[arg_start:arg_end];
 
     # Transform known Graphics methods
     color_decls := "";
+    obj := "ctx";
 
     case method {
     "clear" =>
         # ctx.clear(color) -> Graphics->clear(ctx, color)
-        # If args is a string literal, transform Color expression
         (args, color_decls) = transform_color_arg(args);
         return (1, sys->sprint("Graphics->clear(%s, %s)", obj, args), color_decls);
 
@@ -3697,13 +3702,20 @@ params_contains_graphics(params: string): int
     if (params == nil || len params == 0)
         return 0;
 
-    # Check for Graphics type or ctx identifier
-    if (sys->tokenize(params, "Graphics") != nil)
-        return 1;
+    # Simple substring search for "Graphics" or "ctx"
+    i := 0;
+
+    # Check for Graphics type
+    for (i = 0; i < len params - 7; i++) {
+        if (params[i:i+8] == "Graphics")
+            return 1;
+    }
 
     # Check for ctx identifier
-    if (sys->tokenize(params, "ctx") != nil)
-        return 1;
+    for (i = 0; i < len params - 2; i++) {
+        if (params[i:i+3] == "ctx")
+            return 1;
+    }
 
     return 0;
 }
@@ -3919,6 +3931,95 @@ generate_prologue(cg: ref Codegen, prog: ref Program): string
     return nil;
 }
 
+# Generate code for a single statement without processing next chain
+# Used when iterating through statement lists in Blocks
+generate_statement_no_next(cg: ref Codegen, stmt: ref Ast->Statement, indent: int): string
+{
+    if (stmt == nil)
+        return nil;
+
+    # Build indent string
+    indent_str := "";
+    for (i := 0; i < indent; i++)
+        indent_str += "    ";
+
+    # Generate based on statement type (no next processing at end)
+    pick s := stmt {
+    VarDecl =>
+        if (s.var_decl != nil) {
+            if (s.var_decl.init_expr != nil && len s.var_decl.init_expr > 0)
+                sys->fprint(cg.output, "%s%s := %s;\n", indent_str, s.var_decl.name, s.var_decl.init_expr);
+            else
+                sys->fprint(cg.output, "%s%s : %s;\n", indent_str, s.var_decl.name, s.var_decl.typ);
+        }
+    Block =>
+        sys->fprint(cg.output, "%s{\n", indent_str);
+        sub_stmt := s.statements;
+        while (sub_stmt != nil) {
+            generate_statement_no_next(cg, sub_stmt, indent + 1);
+            sub_stmt = sub_stmt.next;
+        }
+        sys->fprint(cg.output, "%s}\n", indent_str);
+    If =>
+        sys->fprint(cg.output, "%sif (%s) {\n", indent_str, s.condition);
+        if (s.then_stmt != nil)
+            generate_statement_no_next(cg, s.then_stmt, indent + 1);
+        sys->fprint(cg.output, "%s}\n", indent_str);
+        if (s.else_stmt != nil) {
+            sys->fprint(cg.output, "%selse {\n", indent_str);
+            generate_statement_no_next(cg, s.else_stmt, indent + 1);
+            sys->fprint(cg.output, "%s}\n", indent_str);
+        }
+    For =>
+        sys->fprint(cg.output, "%sfor (", indent_str);
+        if (s.init != nil) {
+            pick i := s.init {
+            VarDecl =>
+                if (i.var_decl.init_expr != nil && len i.var_decl.init_expr > 0)
+                    sys->fprint(cg.output, "%s := %s", i.var_decl.name, i.var_decl.init_expr);
+                else
+                    sys->fprint(cg.output, "%s : %s", i.var_decl.name, i.var_decl.typ);
+            Expr =>
+                sys->fprint(cg.output, "%s", i.expression);
+            * =>
+                {}
+            }
+        }
+        sys->fprint(cg.output, "; %s; %s) {\n", s.condition, s.increment);
+        if (s.body != nil)
+            generate_statement_no_next(cg, s.body, indent + 1);
+        sys->fprint(cg.output, "%s}\n", indent_str);
+    While =>
+        sys->fprint(cg.output, "%swhile (%s) {\n", indent_str, s.condition);
+        if (s.body != nil)
+            generate_statement_no_next(cg, s.body, indent + 1);
+        sys->fprint(cg.output, "%s}\n", indent_str);
+    Return =>
+        if (s.expression != nil && len s.expression > 0)
+            sys->fprint(cg.output, "%sreturn %s;\n", indent_str, s.expression);
+        else
+            sys->fprint(cg.output, "%sreturn;\n", indent_str);
+    Expr =>
+        if (s.expression != nil && len s.expression > 0) {
+            (is_graphics, transformed, color_decls) := transform_graphics_call(s.expression);
+            if (is_graphics) {
+                if (color_decls != nil && len color_decls > 0)
+                    sys->fprint(cg.output, "%s%s\n", indent_str, color_decls);
+                sys->fprint(cg.output, "%s%s;\n", indent_str, transformed);
+            } else {
+                (transformed, decls) := transform_color_arg(s.expression);
+                if (decls != nil && len decls > 0)
+                    sys->fprint(cg.output, "%s%s\n", indent_str, decls);
+                sys->fprint(cg.output, "%s%s;\n", indent_str, transformed);
+            }
+        }
+    * =>
+        # Skip other types
+    }
+
+    return nil;
+}
+
 # Generate code for a single statement
 generate_statement(cg: ref Codegen, stmt: ref Ast->Statement, indent: int): string
 {
@@ -3948,7 +4049,38 @@ generate_statement(cg: ref Codegen, stmt: ref Ast->Statement, indent: int): stri
         sys->fprint(cg.output, "%s{\n", indent_str);
         sub_stmt := s.statements;
         while (sub_stmt != nil) {
-            generate_statement(cg, sub_stmt, indent + 1);
+            # Process sub-statement inline to avoid double-processing of next chain
+            pick sub := sub_stmt {
+            VarDecl =>
+                if (sub.var_decl != nil) {
+                    if (sub.var_decl.init_expr != nil && len sub.var_decl.init_expr > 0)
+                        sys->fprint(cg.output, "%s%s := %s;\n", indent_str + "    ", sub.var_decl.name, sub.var_decl.init_expr);
+                    else
+                        sys->fprint(cg.output, "%s%s : %s;\n", indent_str + "    ", sub.var_decl.name, sub.var_decl.typ);
+                }
+            Expr =>
+                if (sub.expression != nil && len sub.expression > 0) {
+                    (is_g, trans, decls) := transform_graphics_call(sub.expression);
+                    if (is_g) {
+                        if (decls != nil && len decls > 0)
+                            sys->fprint(cg.output, "%s%s\n", indent_str + "    ", decls);
+                        sys->fprint(cg.output, "%s%s;\n", indent_str + "    ", trans);
+                    } else {
+                        (trans, d) := transform_color_arg(sub.expression);
+                        if (d != nil && len d > 0)
+                            sys->fprint(cg.output, "%s%s\n", indent_str + "    ", d);
+                        sys->fprint(cg.output, "%s%s;\n", indent_str + "    ", trans);
+                    }
+                }
+            Return =>
+                if (sub.expression != nil && len sub.expression > 0)
+                    sys->fprint(cg.output, "%sreturn %s;\n", indent_str + "    ", sub.expression);
+                else
+                    sys->fprint(cg.output, "%sreturn;\n", indent_str + "    ");
+            * =>
+                # For complex statements (If, For, While, Block), use generate_statement but don't process next
+                generate_statement_no_next(cg, sub_stmt, indent + 1);
+            }
             sub_stmt = sub_stmt.next;
         }
         sys->fprint(cg.output, "%s}\n", indent_str);
@@ -4077,6 +4209,42 @@ generate_statement(cg: ref Codegen, stmt: ref Ast->Statement, indent: int): stri
     return nil;
 }
 
+# Transform Graphics type in params string to ref Graphics->Context
+transform_params_graphics(params: string): string
+{
+    if (params == nil || len params == 0)
+        return params;
+
+    # Look for ": Graphics" or ":Graphics" pattern and replace
+    result := "";
+    i := 0;
+
+    while (i < len params) {
+        # Check for "Graphics" as a type (after :)
+        if (i + 8 <= len params && params[i:i+8] == "Graphics") {
+            # Check if this is followed by non-identifier char (end or , or ))
+            # Check if preceded by : or space+:
+            valid := 0;
+            if (i >= 1 && params[i-1] == ':')
+                valid = 1;
+            else if (i >= 2 && params[i-2] == ':' && params[i-1] == ' ')
+                valid = 1;
+
+            if (valid) {
+                # Replace "Graphics" with "ref Graphics->Context"
+                result += "ref Graphics->Context";
+                i += 8;
+                continue;
+            }
+        }
+
+        result[len result] = params[i];
+        i++;
+    }
+
+    return result;
+}
+
 # Generate code blocks (Limbo functions)
 generate_code_blocks(cg: ref Codegen, prog: ref Program): string
 {
@@ -4084,10 +4252,13 @@ generate_code_blocks(cg: ref Codegen, prog: ref Program): string
     fd := prog.function_decls;
 
     while (fd != nil) {
+        # Transform Graphics types in params
+        transformed_params := transform_params_graphics(fd.params);
+
         if (fd.return_type != nil && fd.return_type != "")
-            sys->fprint(cg.output, "\n%s(%s): %s\n", fd.name, fd.params, fd.return_type);
+            sys->fprint(cg.output, "\n%s(%s): %s\n", fd.name, transformed_params, fd.return_type);
         else
-            sys->fprint(cg.output, "\n%s(%s)\n", fd.name, fd.params);
+            sys->fprint(cg.output, "\n%s(%s)\n", fd.name, transformed_params);
         sys->fprint(cg.output, "{\n");
 
         # Generate statements from the parsed AST
@@ -4208,11 +4379,74 @@ parse_reactive_binding(ident: string): (string, int)
 }
 
 # Check if program should use Draw backend
+# Returns true if:
+# 1. Window has onDraw property (old behavior)
+# 2. Program contains Canvas widgets (new)
+# 3. Program uses Graphics API (Graphics type params or ctx.method calls) (new)
 should_use_draw_backend(prog: ref Program): int
 {
-    if (prog == nil || prog.app == nil || prog.app.props == nil)
+    if (prog == nil || prog.app == nil)
         return 0;
-    return has_property(prog.app.props, "onDraw");
+
+    # Check for onDraw property on Window (old behavior)
+    if (prog.app.props != nil && has_property(prog.app.props, "onDraw"))
+        return 1;
+
+    # Check for Canvas widgets
+    if (prog.app.body != nil && has_canvas_widget(prog.app.body))
+        return 1;
+
+    # Check for Graphics API usage
+    if (needs_graphics_module(prog))
+        return 1;
+
+    return 0;
+}
+
+# Find the onDraw property from the first Canvas widget
+# Returns (function_name, interval)
+find_canvas_ondraw(w: ref Widget): (string, int)
+{
+    while (w != nil) {
+        if (w.wtype == Ast->WIDGET_CANVAS && w.props != nil) {
+            p := w.props;
+            while (p != nil) {
+                if (p.name == "onDraw" && p.value != nil) {
+                    if (p.value.valtype == Ast->VALUE_IDENTIFIER) {
+                        return parse_reactive_binding(ast->value_get_ident(p.value));
+                    }
+                }
+                p = p.next;
+            }
+        }
+
+        # Check children recursively
+        if (w.children != nil) {
+            (fn_name, interval) := find_canvas_ondraw(w.children);
+            if (fn_name != nil && fn_name != "")
+                return (fn_name, interval);
+        }
+
+        w = w.next;
+    }
+    return ("", 0);
+}
+
+# Check if a function uses Graphics context (has Graphics or ctx in params)
+function_uses_graphics(prog: ref Program, fn_name: string): int
+{
+    if (prog == nil || fn_name == nil)
+        return 0;
+
+    fd := prog.function_decls;
+    while (fd != nil) {
+        if (fd.name == fn_name) {
+            # Check params for Graphics type
+            return params_contains_graphics(fd.params);
+        }
+        fd = fd.next;
+    }
+    return 0;
 }
 
 # Generate Draw/wmclient backend init
@@ -4258,6 +4492,17 @@ generate_draw_init(cg: ref Codegen, prog: ref Program): string
                 }
             }
             p = p.next;
+        }
+    }
+
+    # Also check Canvas widgets for onDraw property
+    if (ondraw_fn == nil || ondraw_fn == "") {
+        if (prog.app != nil && prog.app.body != nil) {
+            (canvas_on_draw, canvas_interval) := find_canvas_ondraw(prog.app.body);
+            if (canvas_on_draw != nil && canvas_on_draw != "") {
+                ondraw_fn = canvas_on_draw;
+                ondraw_interval = canvas_interval;
+            }
         }
     }
 
@@ -4367,11 +4612,21 @@ generate_draw_init(cg: ref Codegen, prog: ref Program): string
     }
 
     if (ondraw_fn != nil && ondraw_fn != "") {
-        sys->fprint(cg.output, "    now := daytime->now();\n");
-        sys->fprint(cg.output, "    %s(w.image, now);\n", ondraw_fn);
-        sys->fprint(cg.output, "\n");
-        sys->fprint(cg.output, "    ticks := chan of int;\n");
-        sys->fprint(cg.output, "    spawn timer(ticks, %d);\n", ondraw_interval);
+        uses_graphics := function_uses_graphics(prog, ondraw_fn);
+        if (uses_graphics) {
+            sys->fprint(cg.output, "    now := daytime->now();\n");
+            sys->fprint(cg.output, "    graphics := Graphics->create(w.image, display);\n");
+            sys->fprint(cg.output, "    %s(graphics, now);\n", ondraw_fn);
+            sys->fprint(cg.output, "\n");
+            sys->fprint(cg.output, "    ticks := chan of int;\n");
+            sys->fprint(cg.output, "    spawn timer(ticks, %d);\n", ondraw_interval);
+        } else {
+            sys->fprint(cg.output, "    now := daytime->now();\n");
+            sys->fprint(cg.output, "    %s(w.image, now);\n", ondraw_fn);
+            sys->fprint(cg.output, "\n");
+            sys->fprint(cg.output, "    ticks := chan of int;\n");
+            sys->fprint(cg.output, "    spawn timer(ticks, %d);\n", ondraw_interval);
+        }
     }
 
     # Event loop
@@ -4382,7 +4637,13 @@ generate_draw_init(cg: ref Codegen, prog: ref Program): string
     sys->fprint(cg.output, "            w.wmctl(ctl);\n");
     sys->fprint(cg.output, "            if(ctl != nil && ctl[0] == '!')\n");
     if (ondraw_fn != nil && ondraw_fn != "") {
-        sys->fprint(cg.output, "                %s(w.image, now);\n", ondraw_fn);
+        uses_graphics := function_uses_graphics(prog, ondraw_fn);
+        if (uses_graphics) {
+            sys->fprint(cg.output, "                graphics := Graphics->create(w.image, display);\n");
+            sys->fprint(cg.output, "                %s(graphics, now);\n", ondraw_fn);
+        } else {
+            sys->fprint(cg.output, "                %s(w.image, now);\n", ondraw_fn);
+        }
     } else {
         sys->fprint(cg.output, "                ;\n");
     }
@@ -4414,11 +4675,17 @@ generate_draw_init(cg: ref Codegen, prog: ref Program): string
     sys->fprint(cg.output, "\n");
 
     if (ondraw_fn != nil && ondraw_fn != "") {
+        uses_graphics := function_uses_graphics(prog, ondraw_fn);
         sys->fprint(cg.output, "        <-ticks =>\n");
         sys->fprint(cg.output, "            t := daytime->now();\n");
         sys->fprint(cg.output, "            if(t != now){\n");
         sys->fprint(cg.output, "                now = t;\n");
-        sys->fprint(cg.output, "                %s(w.image, now);\n", ondraw_fn);
+        if (uses_graphics) {
+            sys->fprint(cg.output, "                graphics := Graphics->create(w.image, display);\n");
+            sys->fprint(cg.output, "                %s(graphics, now);\n", ondraw_fn);
+        } else {
+            sys->fprint(cg.output, "                %s(w.image, now);\n", ondraw_fn);
+        }
         sys->fprint(cg.output, "            }\n");
     }
 

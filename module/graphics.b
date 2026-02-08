@@ -21,14 +21,13 @@ init()
 # Create a new graphics context
 create(screen: ref Image, display: ref Display): ref Context
 {
-    ctx := ref Context {
-        screen = screen,
-        display = display,
-        fill_color = display.black,
-        stroke_color = display.black,
-        line_width = 1,
-        font = display.font
-    };
+    ctx := ref Context;
+    ctx.screen = screen;
+    ctx.display = display;
+    ctx.fill_color = display.black;
+    ctx.stroke_color = display.black;
+    ctx.line_width = 1;
+    ctx.font = nil;
     return ctx;
 }
 
@@ -102,6 +101,18 @@ text(ctx: ref Context, str: string, x, y: int)
 {
     if (ctx.screen == nil || ctx.stroke_color == nil || str == nil)
         return;
+
+    # Load font if needed
+    if (ctx.font == nil && ctx.display != nil) {
+        # Try default font path
+        ctx.font = Font.open(ctx.display, "*default*");
+        if (ctx.font == nil)
+            ctx.font = Font.open(ctx.display, "/lib/font/bit/luc/latin1.8.font");
+    }
+
+    if (ctx.font == nil)
+        return;
+
     p := Point(x, y);
     ctx.screen.text(p, ctx.stroke_color, p, ctx.font, str);
 }

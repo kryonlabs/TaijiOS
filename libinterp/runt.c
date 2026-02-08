@@ -41,15 +41,62 @@ xprint(Prog *xp, void *vfp, void *vva, String *s1, char *buf, int n)
 	isr = 0;
 	if(s1 == H)
 		return 0;
-#if defined(__ANDROID__) && 0
-	/* FIX: Validate string pointer before dereferencing.
-	 * Check if the pointer looks valid (not in NULL page, not obviously corrupted).
+
+	/* DEFENSIVE VALIDATION for Android ARM64:
+	 * Check for obviously invalid pointers before dereferencing.
+	 * SEGV_ACCERR crashes indicate invalid memory access.
 	 */
+#ifdef __ANDROID__
+	/* Debug: log pointer value */
+	static int xprint_count = 0;
+	if(xprint_count < 5) {
+		uintptr_t ptr_val = (uintptr_t)s1;
+		const uintptr_t thresh = (uintptr_t)0x100000000000ULL;
+		__android_log_print(ANDROID_LOG_INFO, "xprint",
+			"xprint: s1=%p, ptr_val=0x%llx, threshold=0x%llx, cmp=%d",
+			s1, (unsigned long long)ptr_val, (unsigned long long)thresh, (int)(ptr_val >= thresh));
+		xprint_count++;
+	}
+
+	/* Check for NULL or very low pointers (NULL page) */
 	if((uintptr)s1 < 0x1000) {
-		__android_log_print(ANDROID_LOG_ERROR, "xprint-debug", "xprint: Invalid s1=%p, returning 0", s1);
+		__android_log_print(ANDROID_LOG_ERROR, "xprint",
+			"xprint: Invalid s1=%p (too low), returning empty", s1);
+		return 0;
+	}
+
+	/* Check for suspiciously high pointers (likely corrupted)
+	 * DISABLED: The comparison was causing false positives on valid heap addresses
+	 * The real issue is the SEGV_ACCERR when dereferencing the String pointer
+	 * We'll rely on signal handling and the len validation instead */
+
+	/* Check alignment - String pointers should be word-aligned (8 bytes on ARM64) */
+	if(((uintptr)s1 & 7) != 0) {
+		__android_log_print(ANDROID_LOG_ERROR, "xprint",
+			"xprint: Invalid s1=%p (misaligned), returning empty", s1);
+		return 0;
+	}
+
+	/* Try to safely validate the String structure */
+	/* Use volatile to prevent compiler from optimizing away the read */
+	volatile String *vs1 = s1;
+	volatile int *vlen = &vs1->len;
+
+	/* SAFETY: Touch the memory to make sure it's accessible before reading */
+	/* This helps catch SEGV early with better error info */
+#ifdef __ANDROID__
+	__builtin_prefetch(vlen, 0, 3); /* Prefetch with non-temporal hint */
+#endif
+
+	/* Check if len looks reasonable before using it */
+	int test_len = *vlen;
+	if(test_len < -10000000 || test_len > 10000000) {
+		__android_log_print(ANDROID_LOG_ERROR, "xprint",
+			"xprint: Invalid s1->len=%d at s1=%p, returning empty", test_len, s1);
 		return 0;
 	}
 #endif
+
 	nc = s1->len;
 	if(nc < 0) {
 		nc = -nc;
