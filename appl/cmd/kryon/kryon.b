@@ -1974,11 +1974,12 @@ parse_function_decl(p: ref Parser): (ref Ast->FunctionDecl, string)
         # Inline function: fn name(): type = expression [@ interval]
         p.next();  # consume '='
 
-        # Parse expression until end of line or @
+        # Parse expression until end of line, semicolon, or @
         body_expr := "";
         while (p.peek().toktype != Lexer->TOKEN_ENDINPUT &&
                p.peek().toktype != Lexer->TOKEN_AT &&
-               p.peek().toktype != '\n') {
+               p.peek().toktype != '\n' &&
+               p.peek().toktype != ';') {
             tok := p.next();
 
             # Build expression from tokens
@@ -2008,6 +2009,7 @@ parse_function_decl(p: ref Parser): (ref Ast->FunctionDecl, string)
             if (next_tok.toktype != Lexer->TOKEN_ENDINPUT &&
                 next_tok.toktype != Lexer->TOKEN_AT &&
                 next_tok.toktype != '\n' &&
+                next_tok.toktype != ';' &&
                 should_add_space(tok.toktype, next_tok.toktype)) {
                 body_expr += " ";
             }
@@ -2022,6 +2024,11 @@ parse_function_decl(p: ref Parser): (ref Ast->FunctionDecl, string)
                 return (nil, fmt_error(p, "expected number after '@'"));
 
             interval = int num_tok.number_val;
+        }
+
+        # Consume optional semicolon after inline function
+        if (p.peek().toktype == ';') {
+            p.next();  # consume ';'
         }
 
         # Inline functions need explicit return statement

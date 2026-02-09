@@ -402,6 +402,18 @@ lex(l: ref LexerObj): ref Token
         return create_token(':', lineno);
     }
 
+    # Left bracket [ for array indexing and slicing
+    if (c == '[') {
+        next_char(l);  # consume '['
+        return create_token('[', lineno);
+    }
+
+    # Right bracket ] for array indexing and slicing
+    if (c == ']') {
+        next_char(l);  # consume ']'
+        return create_token(']', lineno);
+    }
+
     # String literal
     if (c == '"') {
         (s, err) := read_string_literal(l);
