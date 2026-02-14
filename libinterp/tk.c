@@ -152,6 +152,10 @@ Tk_toplevel(void *a)
 	Setmark(h);
 	poolmutable(h);
 	t->wreq = cnewc(&Tptr, movp, 8);
+
+	/* Register toplevel for theme refresh */
+	tkregtop(t);
+
 	*f->ret = (Tk_Toplevel*)t;
 }
 
@@ -997,6 +1001,10 @@ tkfreetop(Heap *h, int swept)
 	t = H2D(TkTop*, h);
 	if(t == nil || t->ctxt == nil)
 		return;
+
+	/* Unregister from theme refresh list */
+	tkunregtop(t);
+
 	lockctxt(t->ctxt);
 
 	if(swept) {

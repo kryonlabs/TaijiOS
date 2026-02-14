@@ -46,6 +46,18 @@ MAXCONSOLELINES:	con 1024;
 font: string;
 icon: string = "logo_32.bit";
 
+# Toolbar color indices
+TOOLBAR_BG := 22;
+TOOLBAR_FG := 23;
+TOOLBAR_BUTTON := 24;
+TOOLBAR_BUTTON_ACTIVE := 25;
+
+# Cached toolbar colors
+toolbar_bg: string;
+toolbar_fg: string;
+toolbar_btn: string;
+toolbar_btn_active: string;
+
 # execute this if no menu items have been created
 # by the init script.
 defaultscript :=
@@ -59,6 +71,58 @@ badmodule(p: string)
 {
 	sys->fprint(stderr(), "toolbar: cannot load %s: %r\n", p);
 	raise "fail:bad module";
+}
+
+get_toolbar_color(idx: int): string
+{
+	fd := sys->open(sys->sprint("#w/%d", idx), Sys->OREAD);
+	if(fd == nil)
+		return nil;
+	buf := array[32] of byte;
+	n := sys->read(fd, buf, len buf);
+	if(n <= 0)
+		return nil;
+	s := string buf[0:n];
+	while(len s > 0 && (s[len s-1] == '\n' || s[len s-1] == '\r'))
+		s = s[0:len s-1];
+	return s;
+}
+
+load_toolbar_colors()
+{
+	toolbar_bg = get_toolbar_color(TOOLBAR_BG);
+	if(toolbar_bg == nil)
+		toolbar_bg = "#DDDDDDFF";
+	toolbar_fg = get_toolbar_color(TOOLBAR_FG);
+	if(toolbar_fg == nil)
+		toolbar_fg = "#000000FF";
+	toolbar_btn = get_toolbar_color(TOOLBAR_BUTTON);
+	if(toolbar_btn == nil)
+		toolbar_btn = "#E0E0E0FF";
+	toolbar_btn_active = get_toolbar_color(TOOLBAR_BUTTON_ACTIVE);
+	if(toolbar_btn_active == nil)
+		toolbar_btn_active = "#C0C0C0FF";
+}
+
+apply_toolbar_colors()
+{
+	if(toolbar_bg != nil) {
+		cmd(tbtop, ".toolbar configure -background " + toolbar_bg);
+		cmd(tbtop, ". configure -background " + toolbar_bg);
+	}
+	if(toolbar_btn != nil)
+		cmd(tbtop, ".toolbar.start configure -background " + toolbar_btn);
+	if(toolbar_fg != nil)
+		cmd(tbtop, ".toolbar.start configure -foreground " + toolbar_fg);
+	cmd(tbtop, "update");
+}
+
+timerproc(tick: chan of int)
+{
+	for(;;) {
+		sys->sleep(500);  # Poll every 500ms
+		tick <-= 1;
+	}
 }
 
 init(ctxt: ref Draw->Context, argv: list of string)
@@ -166,6 +230,11 @@ sys->print("error: %s\n", err);
 	donesetup := 0;
 	spawn setup(shctxt, setupfinished);
 
+	# Timer for polling theme changes
+	timer := chan of int;
+	spawn timerproc(timer);
+	lasttheme := get_theme_name();
+
 	snarf: array of byte;
 #	write("/prog/"+string sys->pctl(0, nil)+"/ctl", "restricted"); # for testing
 	for(;;) alt{
@@ -213,7 +282,15 @@ sys->print("error: %s\n", err);
 			e = big len snarf;
 		rc <-= (snarf[int off:int e], "");	# XXX alt # TODO potential bug truncating big to int
 	donesetup = <-setupfinished =>
-		;	
+		;
+	<-timer =>
+		# Poll for theme changes
+		cur := get_theme_name();
+		if(cur != nil && cur != lasttheme) {
+			lasttheme = cur;
+			load_toolbar_colors();
+			apply_toolbar_colors();
+		}
 	}
 }
 
@@ -272,6 +349,11 @@ iconify(id, label: string)
 	label = condenselabel(label);
 	e := tk->cmd(tbtop, "button .toolbar." +id+" -command {send task "+id+"} -takefocus 0");
 	cmd(tbtop, ".toolbar." +id+" configure" + font + " -text '" + label);
+	# Apply toolbar theme colors to the new button
+	if(toolbar_btn != nil)
+		cmd(tbtop, ".toolbar." +id+" configure -background " + toolbar_btn);
+	if(toolbar_fg != nil)
+		cmd(tbtop, ".toolbar." +id+" configure -foreground " + toolbar_fg);
 	if(e[0] != '!')
 		cmd(tbtop, "pack .toolbar."+id+" -side left -fill y");
 	cmd(tbtop, "update");
@@ -320,6 +402,11 @@ toolbar(ctxt: ref Draw->Context, startmenu: int,
 	}
 	cmd(tbtop, "pack .toolbar -fill x");
 	cmd(tbtop, "menu .m");
+
+	# Load and apply toolbar theme colors
+	load_toolbar_colors();
+	apply_toolbar_colors();
+
 	return tbtop;
 }
 

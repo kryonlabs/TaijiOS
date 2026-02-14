@@ -29,3 +29,16 @@ highlight_foreground = #0f380fFF
 # Fill and transparent
 fill = #8bac0fFF
 transparent = #00000000
+
+# Title bar colors (indices 17-21) - Game Boy green theme
+title_background = #306230FF      # Dark green (active)
+title_inactive = #8BAC0FFF        # Slightly darker green (inactive)
+title_foreground = #9BBC0FFF      # Light green text
+title_border = #0F380FFF          # Darkest green border
+title_button = #9BBC0FFF          # Light green button
+
+# Toolbar colors (indices 22-25) - Game Boy green theme
+toolbar_background = #9BBC0FFF    # Light green toolbar background
+toolbar_foreground = #0F380FFF    # Dark green toolbar text
+toolbar_button = #8BAC0FFF        # Medium green button
+toolbar_button_active = #306230FF # Dark green active button

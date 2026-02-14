@@ -29,3 +29,16 @@ highlight_foreground = #000000FF
 # Fill and transparent
 fill = #C0C0C0FF
 transparent = #00000000
+
+# Title bar colors (indices 17-21) - Windows 95 style
+title_background = #000080FF      # Navy blue (active)
+title_inactive = #808080FF        # Gray (inactive)
+title_foreground = #FFFFFFFF      # White text
+title_border = #000000FF          # Black border
+title_button = #C0C0C0FF          # Button face gray
+
+# Toolbar colors (indices 22-25) - Windows 95 style
+toolbar_background = #C0C0C0FF    # Button face gray
+toolbar_foreground = #000000FF    # Black text
+toolbar_button = #C0C0C0FF        # Button face gray
+toolbar_button_active = #808080FF # Darker gray active state

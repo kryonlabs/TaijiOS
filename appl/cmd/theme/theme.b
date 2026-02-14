@@ -166,9 +166,9 @@ loadtheme(path: string): int
 		}
 	}
 
-	# Apply colors to /dev/theme
+	# Apply colors to theme device
 	for (k := 0; k < 17; k++) {
-		devpath := sys->sprint("/lib/theme/%d", k);
+		devpath := sys->sprint("#w/%d", k);
 		cfd := sys->open(devpath, Sys->OWRITE);
 		if (cfd != nil) {
 			sys->write(cfd, array of byte new_colors[k], len new_colors[k]);

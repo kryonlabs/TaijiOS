@@ -77,6 +77,33 @@ static Coltab coltab[] =
 	TkCtransparent,
 		DTransparent,
 		TkSameshade,
+	TkCtitlebgnd,
+		RGB(0x41, 0x69, 0xE1),		/* Royal blue (active title bar) */
+		TkSameshade,
+	TkCtitlebginactive,
+		RGB(0xD3, 0xD3, 0xD3),		/* Light gray (inactive title bar) */
+		TkSameshade,
+	TkCtitlefgnd,
+		RGB(0xFF, 0xFF, 0xFF),		/* White (title text) */
+		TkSameshade,
+	TkCtitleborder,
+		RGB(0x30, 0x30, 0x30),		/* Dark gray (title border) */
+		TkSameshade,
+	TkCtitlebutton,
+		RGB(0xF0, 0xF0, 0xF0),		/* Light gray (title buttons) */
+		TkSameshade,
+	TkCtoolbarbgnd,
+		RGB(0xDD, 0xDD, 0xDD),		/* Toolbar background */
+		TkSameshade,
+	TkCtoolbarfgnd,
+		RGB(0x00, 0x00, 0x00),		/* Toolbar text/icon */
+		TkSameshade,
+	TkCtoolbarbutton,
+		RGB(0xE0, 0xE0, 0xE0),		/* Toolbar button background */
+		TkSameshade,
+	TkCtoolbarbuttonactive,
+		RGB(0xC0, 0xC0, 0xC0),		/* Toolbar button active */
+		TkSameshade,
 	-1,
 };
 
@@ -90,11 +117,11 @@ tksetenvcolours(TkEnv *env)
 	ulong color;
 
 	/*
-	 * First, try to read colors from /lib/theme/{0..16}
+	 * First, try to read colors from #w/{0..16} (theme device)
 	 * Mark each color as set or unset individually
 	 */
 	for(i = 0; i < TkNcolor; i++) {
-		snprint(path, sizeof(path), "/lib/theme/%d", i);
+		snprint(path, sizeof(path), "#w/%d", i);
 		fd = kopen(path, OREAD);
 
 		if(fd >= 0) {
@@ -131,7 +158,7 @@ tksetenvcolours(TkEnv *env)
 	}
 
 	/* Track theme version for live updates */
-	fd = kopen("/lib/theme/ctl", OREAD);
+	fd = kopen("#w/ctl", OREAD);
 	if(fd >= 0) {
 		n = kread(fd, buf, sizeof(buf)-1);
 		kclose(fd);

@@ -14,17 +14,20 @@ include "tk.m";
 	tk: Tk;
 include "tkclient.m";
 	tkclient: Tkclient;
+include "titlebar.m";
+	titlebar: Titlebar;
 
 Theme: module {
 	init:	fn(ctxt: ref Draw->Context, argv: list of string);
 };
 
 THEMEDIR := "/lib/theme/";
-DEVTHEME := "/lib/theme/";
+DEVTHEME := "#w/";
 
 display: ref Display;
 top: ref Tk->Toplevel;
 themes: list of string;
+lasttheme: string;
 
 tkcfg := array[] of {
 	"frame .f",
@@ -45,8 +48,6 @@ tkcfg := array[] of {
 	"pack .btns.apply .btns.reload .btns.close -side left -padx 5 -pady 10",
 	"pack .btns",
 	"pack .f -fill both -expand 1",
-	# Set minimum window size - use tkclient syntax
-	"wm geometry . 500x600",
 };
 
 init(ctxt: ref Draw->Context, nil: list of string)
@@ -55,10 +56,13 @@ init(ctxt: ref Draw->Context, nil: list of string)
 	draw = load Draw Draw->PATH;
 	tk = load Tk Tk->PATH;
 	tkclient = load Tkclient Tkclient->PATH;
+	titlebar = load Titlebar Titlebar->PATH;
 
 	sys->pctl(Sys->NEWPGRP, nil);
 
 	tkclient->init();
+	if(titlebar != nil)
+		titlebar->init();
 	if(ctxt == nil)
 		ctxt = tkclient->makedrawcontext();
 	display = ctxt.display;
@@ -83,6 +87,13 @@ init(ctxt: ref Draw->Context, nil: list of string)
 	tkclient->onscreen(top, nil);
 	tkclient->startinput(top, "kbd"::"ptr"::nil);
 
+	# Timer for polling theme changes
+	timer := chan of int;
+	spawn timerproc(timer);
+
+	# Remember current theme
+	lasttheme = current_theme();
+
 	for(;;) alt {
 	s := <-top.ctxt.kbd =>
 		tk->keyboard(top, s);
@@ -94,6 +105,17 @@ init(ctxt: ref Draw->Context, nil: list of string)
 		if(c == "exit")
 			return;
 		tkclient->wmctl(top, c);
+
+	<-timer =>
+		# Poll for theme changes
+		cur := current_theme();
+		if(cur != nil && cur != lasttheme) {
+			lasttheme = cur;
+			cmd(top, sys->sprint(".title configure -text {Theme: %s}", cur));
+			refresh_theme_colors();
+			cmd(top, "update");
+			populate_themes();
+		}
 
 	cmd := <-cmdch =>
 		case cmd {
@@ -139,7 +161,7 @@ populate_themes()
 	cur := current_theme();
 	if(cur != nil) {
 		# Update title to show current theme
-		cmd(top, sys->sprint(".title configure -text {TaijiOS Theme Switcher - Current: %s}", cur));
+		cmd(top, sys->sprint(".title configure -text {Theme: %s}", cur));
 
 		# Try to select current theme
 		i := 0;
@@ -153,7 +175,7 @@ populate_themes()
 			i++;
 		}
 	} else {
-		cmd(top, ".title configure -text {TaijiOS Theme Switcher}");
+		cmd(top, ".title configure -text {Theme: default}");
 	}
 }
 
@@ -228,10 +250,18 @@ apply_theme()
 		return;
 	}
 
-	# Reconfigure all widgets with new colors
+	# Update title text FIRST
+	cmd(top, sys->sprint(".title configure -text {Theme: %s}", theme));
+
+	# THEN refresh all colors (this sets foreground on .title)
 	refresh_theme_colors();
 
-	cmd(top, sys->sprint(".title configure -text {Applied: %s}", theme));
+	# Refresh all window titlebars
+	if(titlebar != nil)
+		titlebar->refresh_all();
+
+	# Force immediate redraw of all widgets
+	cmd(top, "update");
 
 	# Trigger reload to notify applications
 	reload := sys->open("#w/reload", Sys->OWRITE);
@@ -241,18 +271,22 @@ apply_theme()
 
 refresh_theme_colors()
 {
-	# Reconfigure main frame with new background
+	# Reconfigure all frames and widgets with new background
 	bg := get_color(1);  # TkCbackgnd
 	fg := get_color(0);  # TkCforegnd
 
-	if(bg != nil)
+	if(bg != nil) {
+		cmd(top, ". configure -background " + bg);
 		cmd(top, ".f configure -background " + bg);
+		cmd(top, ".listframe configure -background " + bg);
+		cmd(top, ".listframe.lst configure -background " + bg);
+		cmd(top, ".listframe.sb configure -background " + bg);
+		cmd(top, ".btns configure -background " + bg);
+	}
 	if(fg != nil)
 		cmd(top, ".title configure -foreground " + fg);
-
-	# Refresh listbox
 	if(bg != nil)
-		cmd(top, ".listframe.lst configure -background " + bg);
+		cmd(top, ".title configure -background " + bg);
 
 	# Refresh buttons
 	refresh_buttons();
@@ -263,19 +297,22 @@ refresh_buttons()
 	bg := get_color(1);  # TkCbackgnd
 	fg := get_color(0);  # TkCforegnd
 
-	# Configure all buttons
-	buttons := ".btns.apply .btns.reload .btns.close";
-	for(i := 0; i < 3; i++) {
-		if(bg != nil)
-			cmd(top, buttons + " configure -background " + bg);
-		if(fg != nil)
-			cmd(top, buttons + " configure -foreground " + fg);
+	# Configure EACH button individually
+	if(bg != nil) {
+		cmd(top, ".btns.apply configure -background " + bg);
+		cmd(top, ".btns.reload configure -background " + bg);
+		cmd(top, ".btns.close configure -background " + bg);
+	}
+	if(fg != nil) {
+		cmd(top, ".btns.apply configure -foreground " + fg);
+		cmd(top, ".btns.reload configure -foreground " + fg);
+		cmd(top, ".btns.close configure -foreground " + fg);
 	}
 }
 
 get_color(idx: int): string
 {
-	fd := sys->open(sys->sprint("/lib/theme/%d", idx), Sys->OREAD);
+	fd := sys->open(sys->sprint("#w/%d", idx), Sys->OREAD);
 	if(fd == nil)
 		return nil;
 
@@ -285,7 +322,11 @@ get_color(idx: int): string
 	if(n <= 0)
 		return nil;
 
-	return string buf[0:n];
+	# Strip trailing whitespace (newline from device)
+	s := string buf[0:n];
+	while(len s > 0 && (s[len s-1] == '\n' || s[len s-1] == '\r' || s[len s-1] == ' '))
+		s = s[0:len s-1];
+	return s;
 }
 
 reload_themes()
@@ -301,4 +342,12 @@ cmd(top: ref Tk->Toplevel, s: string): string
 	if(e != nil && e[0] == '!')
 		sys->print("theme: tk error '%s': %s\n", s, e);
 	return e;
+}
+
+timerproc(tick: chan of int)
+{
+	for(;;) {
+		sys->sleep(500);  # Poll every 500ms
+		tick <-= 1;
+	}
 }

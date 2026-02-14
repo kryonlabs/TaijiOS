@@ -3,6 +3,10 @@
 #include <kernel.h>
 #include "tk.h"
 
+/* Global list of all TkTop instances for theme refresh */
+static TkTop *alltktops;
+static Lock alltktopslock;
+
 struct TkCol
 {
 	ulong	rgba1;
@@ -528,7 +532,7 @@ tkrefreshtheme(TkEnv *env)
 	char buf[128];
 	uvlong newversion;
 
-	fd = kopen("/lib/theme/ctl", OREAD);
+	fd = kopen("#w/ctl", OREAD);
 	if(fd < 0)
 		return 0;
 
@@ -550,13 +554,65 @@ tkrefreshtheme(TkEnv *env)
 	if(newversion != env->themeversion) {
 		/* Theme changed, reload colors */
 		tksetenvcolours(env);
-		/* Mark root widget as dirty so it redraws with new colors */
+		/* Clear cached color images so new colors take effect */
+		if(env->top != nil && env->top->ctxt != nil)
+			tkfreecolcache(env->top->ctxt);
+		/* Mark all widgets as dirty so they redraw with new colors */
 		if(env->top != nil && env->top->root != nil)
-			tkdirty(env->top->root);
+			tkdirtyall(env->top->root);
 		return 1;
 	}
 
 	return 0;
+}
+
+/*
+ * tkregtop - Register a TkTop for theme refresh notifications
+ */
+void
+tkregtop(TkTop *t)
+{
+	lock(&alltktopslock);
+	t->link = alltktops;
+	alltktops = t;
+	unlock(&alltktopslock);
+}
+
+/*
+ * tkunregtop - Unregister a TkTop (called when destroyed)
+ */
+void
+tkunregtop(TkTop *t)
+{
+	TkTop **tp;
+
+	lock(&alltktopslock);
+	for(tp = &alltktops; *tp != nil; tp = &(*tp)->link) {
+		if(*tp == t) {
+			*tp = t->link;
+			break;
+		}
+	}
+	unlock(&alltktopslock);
+}
+
+/*
+ * tkrefreshallthemes - Refresh theme colors for all registered TkTops
+ * Called by theme event watcher when theme changes.
+ */
+void
+tkrefreshallthemes(void)
+{
+	TkTop *t;
+
+	lock(&alltktopslock);
+	for(t = alltktops; t != nil; t = t->link) {
+		if(t->env != nil) {
+			tkrefreshtheme(t->env);
+			tkupdate(t);
+		}
+	}
+	unlock(&alltktopslock);
 }
 
 void
@@ -1641,6 +1697,29 @@ tkdirty(Tk *tk)
 	}
 }
 
+/*
+ * tkdirtyall - Mark widget and ALL its descendants as dirty
+ * Used for theme changes when every widget needs redraw
+ */
+void
+tkdirtyall(Tk *tk)
+{
+	Tk *child;
+
+	if(tk == nil)
+		return;
+
+	/* Mark this widget's entire area as dirty */
+	tk->dirty.min = ZP;
+	tk->dirty.max.x = tk->act.width + 2*tk->borderwidth;
+	tk->dirty.max.y = tk->act.height + 2*tk->borderwidth;
+	tkdirty(tk);
+
+	/* Recursively mark all children */
+	for(child = tk->slave; child != nil; child = child->next)
+		tkdirtyall(child);
+}
+
 static int
 qcmdcmp(const void *a, const void *b)
 {
@@ -1750,10 +1829,6 @@ tkexec(TkTop *t, char *arg, char **val)
 {
 	int cmdsz, n;
 	char *p, *cmd, *e, *c;
-
-	/* Check for theme changes before executing any command */
-	if(t->env != nil)
-		tkrefreshtheme(t->env);
 
 	if(t->execdepth >= 0 && ++t->execdepth > 128)
 		return TkDepth;

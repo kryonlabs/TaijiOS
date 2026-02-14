@@ -15,7 +15,10 @@
 #include <string.h>
 #include <stdio.h>
 
-#define NTHEMECOLORS  17
+/* External function from libtk to refresh all Tk windows */
+extern void tkrefreshallthemes(void);
+
+#define NTHEMECOLORS  26
 
 /* QID path values for theme files */
 enum {
@@ -42,6 +45,15 @@ enum {
 	Qcolor14,  /* TkChighlightfgnd */
 	Qcolor15,  /* TkCfill */
 	Qcolor16,  /* TkCtransparent */
+	Qcolor17,  /* TkCtitlebgnd */
+	Qcolor18,  /* TkCtitlebginactive */
+	Qcolor19,  /* TkCtitlefgnd */
+	Qcolor20,  /* TkCtitleborder */
+	Qcolor21,  /* TkCtitlebutton */
+	Qcolor22,  /* TkCtoolbarbgnd */
+	Qcolor23,  /* TkCtoolbarfgnd */
+	Qcolor24,  /* TkCtoolbarbutton */
+	Qcolor25,  /* TkCtoolbarbuttonactive */
 };
 
 /* Theme color state */
@@ -56,6 +68,7 @@ typedef struct ThemeState {
 	ThemeColor colors[NTHEMECOLORS];
 	char current_theme[64];
 	uvlong version;
+	Rendez eventq;	/* For blocking reads on Qevent */
 } ThemeState;
 
 static ThemeState themestate;
@@ -85,6 +98,15 @@ static Dirtab themedirtab[] = {
 	"14",         {Qcolor14}, 0, 0666,
 	"15",         {Qcolor15}, 0, 0666,
 	"16",         {Qcolor16}, 0, 0666,
+	"17",         {Qcolor17}, 0, 0666,
+	"18",         {Qcolor18}, 0, 0666,
+	"19",         {Qcolor19}, 0, 0666,
+	"20",         {Qcolor20}, 0, 0666,
+	"21",         {Qcolor21}, 0, 0666,
+	"22",         {Qcolor22}, 0, 0666,
+	"23",         {Qcolor23}, 0, 0666,
+	"24",         {Qcolor24}, 0, 0666,
+	"25",         {Qcolor25}, 0, 0666,
 };
 
 /* Color names matching TkC indices */
@@ -106,6 +128,15 @@ static char* colornames[NTHEMECOLORS] = {
 	"highlight_foreground", /* TkChighlightfgnd */
 	"fill",                 /* TkCfill */
 	"transparent",          /* TkCtransparent */
+	"title_background",     /* TkCtitlebgnd */
+	"title_inactive",       /* TkCtitlebginactive */
+	"title_foreground",     /* TkCtitlefgnd */
+	"title_border",         /* TkCtitleborder */
+	"title_button",         /* TkCtitlebutton */
+	"toolbar_background",   /* TkCtoolbarbgnd */
+	"toolbar_foreground",   /* TkCtoolbarfgnd */
+	"toolbar_button",       /* TkCtoolbarbutton */
+	"toolbar_button_active", /* TkCtoolbarbuttonactive */
 };
 
 static int load_theme_by_name(char *name);
@@ -132,6 +163,15 @@ static ulong defaultcolors[NTHEMECOLORS] = {
 	0x000000FF, /* highlight_foreground (TkChighlightfgnd) */
 	0xDDDDDDFF, /* fill (TkCfill) */
 	0x00000000, /* transparent (TkCtransparent) */
+	0x4169E1FF, /* title_background (TkCtitlebgnd) - Royal blue */
+	0xD3D3D3FF, /* title_inactive (TkCtitlebginactive) - Light gray */
+	0xFFFFFFFF, /* title_foreground (TkCtitlefgnd) - White */
+	0x303030FF, /* title_border (TkCtitleborder) - Dark gray */
+	0xF0F0F0FF, /* title_button (TkCtitlebutton) - Light gray */
+	0xDDDDDDFF, /* toolbar_background (TkCtoolbarbgnd) */
+	0x000000FF, /* toolbar_foreground (TkCtoolbarfgnd) */
+	0xE0E0E0FF, /* toolbar_button (TkCtoolbarbutton) */
+	0xC0C0C0FF, /* toolbar_button_active (TkCtoolbarbuttonactive) */
 };
 
 static void
@@ -149,6 +189,7 @@ themeinit(void)
 
 	strcpy(themestate.current_theme, "default");
 	themestate.version = 0;
+	/* themestate.eventq.l is automatically zero-initialized via memset above */
 }
 
 /* Load theme from /lib/theme/{name}.theme file */
@@ -224,6 +265,8 @@ load_theme_by_name(char *name)
 	strncpy(themestate.current_theme, name, sizeof(themestate.current_theme)-1);
 	themestate.current_theme[sizeof(themestate.current_theme)-1] = 0;
 	themestate.version++;
+	Wakeup(&themestate.eventq);  /* Wake any blocked readers on Qevent */
+	tkrefreshallthemes();        /* Refresh all TkTops with new theme */
 
 	unlock(&themestate.l);
 
@@ -260,6 +303,14 @@ themeclose(Chan *c)
 	USED(c);
 }
 
+/* Helper function for Sleep - returns true when theme version changes */
+static int
+themewait(void *v)
+{
+	uvlong *orig = v;
+	return themestate.version != *orig;
+}
+
 static long
 themeread(Chan *c, void *buf, long n, vlong off)
 {
@@ -283,7 +334,24 @@ themeread(Chan *c, void *buf, long n, vlong off)
 		return readstr(off, buf, n, "default\ndark\nlight\n");
 
 	case Qevent:
-		return 0;
+	{
+		uvlong origversion;
+		char tmp[128];
+
+		lock(&themestate.l);
+		origversion = themestate.version;
+		unlock(&themestate.l);
+
+		/* Block until theme version changes */
+		Sleep(&themestate.eventq, themewait, &origversion);
+
+		/* Return new version info */
+		lock(&themestate.l);
+		snprint(tmp, sizeof(tmp), "%lld %s\n",
+			themestate.version, themestate.current_theme);
+		unlock(&themestate.l);
+		return readstr(off, buf, n, tmp);
+	}
 
 	default:
 		/* Read color value */
@@ -342,6 +410,8 @@ themewrite(Chan *c, void *buf, long n, vlong off)
 				themestate.colors[idx].value = color;
 				themestate.colors[idx].vers++;
 				themestate.version++;
+				Wakeup(&themestate.eventq);  /* Wake any blocked readers on Qevent */
+				tkrefreshallthemes();        /* Refresh all TkTops with new theme */
 				unlock(&themestate.l);
 				return n;
 			}

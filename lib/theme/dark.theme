@@ -23,3 +23,16 @@ highlight_foreground = #93A1A1FF
 
 fill = #2C2C2CFF
 transparent = #00000000
+
+# Title bar colors (indices 17-21) - dark theme
+title_background = #1E1E1EFF      # Dark blue-gray (active)
+title_inactive = #2D2D2DFF        # Darker gray (inactive)
+title_foreground = #E0E0E0FF      # Light text
+title_border = #000000FF          # Black border
+title_button = #3D3D3DFF          # Button gray
+
+# Toolbar colors (indices 22-25) - dark theme
+toolbar_background = #1E1E1EFF    # Dark toolbar background
+toolbar_foreground = #EEEEEEFF    # Light toolbar text
+toolbar_button = #2D2D2DFF        # Dark button background
+toolbar_button_active = #3D3D3DFF # Active button state

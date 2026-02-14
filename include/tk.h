@@ -395,6 +395,19 @@ enum
 	TkCfill,
 	TkCtransparent,
 
+	/* Title bar colors (17-21) */
+	TkCtitlebgnd,		/* Title bar background (active) */
+	TkCtitlebginactive,	/* Title bar background (inactive) */
+	TkCtitlefgnd,		/* Title bar text */
+	TkCtitleborder,		/* Title bar border */
+	TkCtitlebutton,		/* Title bar buttons */
+
+	/* Toolbar colors (22-25) */
+	TkCtoolbarbgnd,		/* Toolbar background */
+	TkCtoolbarfgnd,		/* Toolbar text/icon */
+	TkCtoolbarbutton,	/* Toolbar button background */
+	TkCtoolbarbuttonactive,	/* Toolbar button active */
+
 	TkNcolor,
 
 	TkSameshade	= 0,		/* relative shade for tkgshade() and tkrgbashade()*/
@@ -685,6 +698,9 @@ extern	void		tksetpanelimage(Tk *tk, Image*, Image*);
 /* General - colrs.c */
 extern	void		tksetenvcolours(TkEnv*);
 extern	int		tkrefreshtheme(TkEnv*);
+extern	void		tkregtop(TkTop*);
+extern	void		tkunregtop(TkTop*);
+extern	void		tkrefreshallthemes(void);
 
 /* General - ebind.c */
 extern	void		tkcmdbind(Tk*, int, char*, void*);
@@ -767,6 +783,7 @@ extern	char*		tkfracword(TkTop*, char**, s32int*, TkEnv*);
 extern	char*		tkfprint(char*, int);
 extern	char*		tkvalue(char**, char*, ...);
 extern	void		tkdirty(Tk *);
+extern	void		tkdirtyall(Tk *);
 extern	void		tksorttable(void);
 extern	char*		tkexec(TkTop*, char*, char**);
 extern	int		tkeventfmt(Fmt*);
