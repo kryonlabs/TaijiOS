@@ -4,6 +4,10 @@
 #include "runt.h"
 #include "draw.h"
 #include "tk.h"
+
+extern	void	tkfreetop(Heap*, int);
+void	Tk_refreshallenvs(void*);
+
 #include "tkmod.h"
 #include "pool.h"
 #include "drawif.h"
@@ -11,7 +15,6 @@
 #include "raise.h"
 #include "kernel.h"
 
-extern	void	tkfreetop(Heap*, int);
 Type*	fakeTkTop;
 static	uchar	TktypeMap[] = Tk_Toplevel_map;
 int	tkstylus;
@@ -1348,4 +1351,10 @@ void
 tkcursorset(TkTop *t, Point p)
 {
 	tkwreq(t, "ptr %d %d", p.x, p.y);
+}
+
+void
+Tk_refreshallenvs(void *a)
+{
+	tkrefreshallenvs();
 }

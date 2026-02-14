@@ -18,6 +18,8 @@ include "tk.m";
 include "tkclient.m";
 	tkclient: Tkclient;
 include "sh.m";
+include "string.m";
+	strconv: String;
 
 CON_Maxnpts:	con 1000;
 Maxnhits:	con 5;
@@ -95,6 +97,112 @@ shwin_cfg := array[] of {
 };
 
 
+# Read color value from theme device (#w/n)
+# Returns color as 0xRRGGBBAA or -1 on error
+read_theme_color(idx: int): int
+{
+	fd := sys->open(sys->sprint("#w/%d", idx), Sys->OREAD);
+	if(fd == nil)
+		return -1;
+
+	buf := array[16] of byte;
+	n := sys->read(fd, buf, len buf);
+	fd = nil;
+
+	if(n <= 1)
+		return -1;
+
+	# Parse #RRGGBBAA format
+	if(buf[0] != byte '#')
+		return -1;
+
+	# Manually parse hex string
+	s := string buf[1:n];
+	v := 0;
+	for(i := 0; i < len s; i++) {
+		c := s[i];
+		if(c >= '0' && c <= '9')
+			v = (v << 4) + (c - '0');
+		else if(c >= 'A' && c <= 'F')
+			v = (v << 4) + (c - 'A' + 10);
+		else if(c >= 'a' && c <= 'f')
+			v = (v << 4) + (c - 'a' + 10);
+		else
+			break;
+	}
+	return v;
+}
+
+# Update terminal colors when theme changes
+update_theme_on_change()
+{
+	fd := sys->open("#w/ctl", Sys->OREAD);
+	if(fd == nil)
+		return;
+
+	last_ver := 0;
+	buf := array[128] of byte;
+
+	for(;;) {
+		sys->sleep(1000);  # Check every second
+
+		# Read current theme version
+		fd = sys->open("#w/ctl", Sys->OREAD);
+		if(fd == nil)
+			continue;
+
+		n := sys->read(fd, buf, len buf);
+		fd = nil;
+
+		if(n > 0) {
+			buf[n] = byte 0;
+			s := string buf;
+			# Parse "version N" - find version number
+			# Simple search for "version "
+			p := 0;
+			for(i := 0; i < len s - 7; i++) {
+				if(s[i:i+8] == "version ") {
+					p = i + 8;
+					break;
+				}
+			}
+			if(p > 0) {
+				ver_str := s[p:];
+				# Extract digits
+				ver := 0;
+				for(i := 0; i < len ver_str && ver_str[i] >= '0' && ver_str[i] <= '9'; i++) {
+					ver = ver * 10 + (ver_str[i] - '0');
+				}
+				if(ver > last_ver) {
+					last_ver = ver;
+					# Theme changed, update colors
+					theme_fg := read_theme_color(0);
+					theme_bg := read_theme_color(1);
+
+					if(theme_fg != -1 && vtc[0] != nil) {
+						r := (theme_fg >> 24) & 255;
+						g := (theme_fg >> 16) & 255;
+						b := (theme_fg >> 8) & 255;
+						vtc[0] = display.newimage(((0,0),(1,1)), t.image.chans,
+							1, display.rgb2cmap(r, g, b));
+					}
+
+					if(theme_bg != -1 && vtc[7] != nil) {
+						r := (theme_bg >> 24) & 255;
+						g := (theme_bg >> 16) & 255;
+						b := (theme_bg >> 8) & 255;
+						vtc[7] = display.newimage(((0,0),(1,1)), t.image.chans,
+							1, display.rgb2cmap(r, g, b));
+					}
+
+					# Force redraw
+					vt_write(vt, "\u001b[2J");
+				}
+			}
+		}
+	}
+}
+
 titlebar()
 {
 	tk->cmd(t, "destroy .Wm_t.S");
@@ -135,6 +243,7 @@ init(ctxt: ref Draw->Context, nil: list of string)
 	draw = load Draw Draw->PATH;
 	tk = load Tk Tk->PATH;
 	tkclient = load Tkclient Tkclient->PATH;
+	strconv = load String String->PATH;
 
 	stderr = sys->fildes(2);
 
@@ -180,6 +289,10 @@ init(ctxt: ref Draw->Context, nil: list of string)
 	npts := 0;
 	WasUp := 1;
 
+	# Read theme colors for terminal
+	theme_fg := read_theme_color(0);
+	theme_bg := read_theme_color(1);
+
 	for(i=0; i<16; i++) {
 		r := 0;
 		g := 0;
@@ -193,6 +306,19 @@ init(ctxt: ref Draw->Context, nil: list of string)
 			g = v;
 		if(i&4)
 			b = v;
+
+		# Use theme colors for foreground (0) and background (7)
+		if(i == 0 && theme_fg != -1) {
+			r = (theme_fg >> 24) & 255;
+			g = (theme_fg >> 16) & 255;
+			b = (theme_fg >> 8) & 255;
+		}
+		if(i == 7 && theme_bg != -1) {
+			r = (theme_bg >> 24) & 255;
+			g = (theme_bg >> 16) & 255;
+			b = (theme_bg >> 8) & 255;
+		}
+
 		vtc[i] = display.newimage(((0,0),(1,1)), t.image.chans,
 				1, display.rgb2cmap(r, g, b));
 		if (vtc[i] == nil) {
@@ -202,6 +328,9 @@ init(ctxt: ref Draw->Context, nil: list of string)
 	}
 
 	vt_write(vt, "\u001b[2J");
+
+	# Register for theme change notifications
+	spawn update_theme_on_change();
 
 	ioc := chan of (int, ref Sys->FileIO, ref Sys->FileIO);
 	spawn newsh(ctxt, ioc);

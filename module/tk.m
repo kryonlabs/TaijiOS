@@ -22,4 +22,5 @@ Tk: module
 	getimage:		fn(t: ref Toplevel, name: string): (ref Draw->Image, ref Draw->Image, string);
 	quote:		fn(s: string): string;
 	color:		fn(col: string): int;
+	refreshallenvs:	fn();
 };

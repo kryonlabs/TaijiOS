@@ -703,8 +703,7 @@ extern	int		tkrefreshtheme(TkEnv*);
 extern	void		tkregtop(TkTop*);
 extern	void		tkunregtop(TkTop*);
 extern	void		tkrefreshallthemes(void);
-extern	void		tkregistertheme(TkEnv*);
-extern	void		tkunregistertheme(TkEnv*);
+extern	void		tkrefreshallenvs(void);
 
 /* General - ebind.c */
 extern	void		tkcmdbind(Tk*, int, char*, void*);

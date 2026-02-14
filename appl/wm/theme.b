@@ -240,17 +240,16 @@ apply_theme()
 	# THEN refresh all colors (this sets foreground on .title)
 	refresh_theme_colors();
 
+	# Force refresh of ALL applications globally
+	# This works even if callbacks failed to register
+	tk->cmd(top, "refreshallenvs");
+
 	# Refresh all window titlebars
 	if(titlebar != nil)
 		titlebar->refresh_all();
 
 	# Force immediate redraw of all widgets
 	cmd(top, "update");
-
-	# Trigger reload to notify applications
-	reload := sys->open("#w/reload", Sys->OWRITE);
-	if(reload != nil)
-		sys->write(reload, array of byte "1", 1);
 }
 
 refresh_theme_colors()

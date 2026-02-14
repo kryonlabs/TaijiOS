@@ -596,11 +596,6 @@ tkunregtop(TkTop *t)
 {
 	TkTop **tp;
 
-	/* Unregister theme callback */
-	if(t->env != nil) {
-		tkunregistertheme(t->env);
-	}
-
 	lock(&alltktopslock);
 	for(tp = &alltktops; *tp != nil; tp = &(*tp)->link) {
 		if(*tp == t) {
@@ -631,65 +626,33 @@ tkrefreshallthemes(void)
 }
 
 /*
- * theme_invalidate - Callback for theme change notifications
- * Invalidates the color cache and triggers redraw of all widgets
- */
-static void
-theme_invalidate(void *arg)
-{
-	TkEnv *env = (TkEnv*)arg;
-
-	/* Invalidate color cache */
-	env->colors_valid = 0;
-
-	/* Clear cached color images so new colors take effect */
-	if(env->top != nil && env->top->ctxt != nil)
-		tkfreecolcache(env->top->ctxt);
-
-	/* Mark all widgets as dirty so they redraw with new colors */
-	if(env->top != nil && env->top->root != nil)
-		tkdirtyall(env->top->root);
-}
-
-/*
- * tkregistertheme - Register a TkEnv for theme change notifications
+ * tkrefreshallenvs - Refresh colors in ALL TkEnv objects
+ * Called by theme switcher to force color reload everywhere
+ * Does NOT rely on callback registration
  */
 void
-tkregistertheme(TkEnv *env)
+tkrefreshallenvs(void)
 {
-	int fd;
-	void *buf[2];  /* [0] = callback, [1] = arg */
+	TkTop *t;
 
-	if(env == nil)
-		return;
+	lock(&alltktopslock);
+	for(t = alltktops; t != nil; t = t->link) {
+		if(t->env != nil) {
+			/* Force reload colors from device */
+			tkloadcolors(t->env);
 
-	fd = kopen("#w/register", OWRITE);
-	if(fd >= 0) {
-		/* Write both callback function and env pointer to register */
-		buf[0] = (void*)theme_invalidate;
-		buf[1] = (void*)env;
-		write(fd, buf, sizeof(buf));
-		kclose(fd);
+			/* Clear cached color images so new colors take effect */
+			if(t->ctxt != nil)
+				tkfreecolcache(t->ctxt);
+
+			/* Mark all widgets as dirty and redraw */
+			if(t->root != nil)
+				tkdirtyall(t->root);
+
+			tkupdate(t);
+		}
 	}
-}
-
-/*
- * tkunregistertheme - Unregister a TkEnv from theme change notifications
- */
-void
-tkunregistertheme(TkEnv *env)
-{
-	int fd;
-
-	if(env == nil)
-		return;
-
-	fd = kopen("#w/unregister", OWRITE);
-	if(fd >= 0) {
-		/* Write pointer to env to unregister */
-		write(fd, &env, sizeof(env));
-		kclose(fd);
-	}
+	unlock(&alltktopslock);
 }
 
 void
@@ -713,9 +676,6 @@ tkputenv(TkEnv *env)
 
 	if(locked)
 		unlockdisplay(d);
-
-	/* Unregister from theme change notifications */
-	tkunregistertheme(env);
 
 	free(env);
 }

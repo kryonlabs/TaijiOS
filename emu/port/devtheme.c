@@ -14,6 +14,7 @@
 #include "error.h"
 #include <string.h>
 #include <stdio.h>
+#include <dirent.h>
 
 #define NTHEMECOLORS  26
 
@@ -23,10 +24,7 @@ enum {
 	Qctl,
 	Qtheme,
 	Qlist,
-	Qreload,
 	Qevent,
-	Qregister,  /* Register for theme change callbacks */
-	Qunregister, /* Unregister from theme change callbacks */
 	Qcolor0,   /* TkCforegnd */
 	Qcolor1,   /* TkCbackgnd */
 	Qcolor2,   /* TkCbackgndlght */
@@ -62,20 +60,12 @@ typedef struct ThemeColor {
 	int vers;
 } ThemeColor;
 
-/* Callback for theme change notifications */
-typedef struct ThemeCallback {
-	void (*callback)(void *);  /* Function to call on theme change */
-	void *arg;                 /* TkEnv or TkTop argument */
-	struct ThemeCallback *next;
-} ThemeCallback;
-
 typedef struct ThemeState {
 	Lock l;
 	ThemeColor colors[NTHEMECOLORS];
 	char current_theme[64];
 	uvlong version;
 	Rendez eventq;	/* For blocking reads on Qevent */
-	ThemeCallback *callbacks;  /* Registration list for theme notifications */
 } ThemeState;
 
 static ThemeState themestate;
@@ -86,10 +76,7 @@ static Dirtab themedirtab[] = {
 	"ctl",        {Qctl}, 0, 0666,
 	"theme",      {Qtheme}, 0, 0666,
 	"list",       {Qlist}, 0, 0444,
-	"reload",     {Qreload}, 0, 0222,
 	"event",      {Qevent}, 0, 0444,
-	"register",   {Qregister}, 0, 0222,
-	"unregister", {Qunregister}, 0, 0222,
 	"0",          {Qcolor0}, 0, 0666,
 	"1",          {Qcolor1}, 0, 0666,
 	"2",          {Qcolor2}, 0, 0666,
@@ -199,6 +186,9 @@ themeinit(void)
 	strcpy(themestate.current_theme, "default");
 	themestate.version = 0;
 	/* themestate.eventq.l is automatically zero-initialized via memset above */
+
+	/* DON'T load theme here - filesystem not ready yet */
+	/* Theme will be loaded lazily on first access by applications */
 }
 
 /* Load theme from /lib/theme/{name}.theme file */
@@ -276,16 +266,90 @@ load_theme_by_name(char *name)
 	themestate.version++;
 	Wakeup(&themestate.eventq);  /* Wake any blocked readers on Qevent */
 
-	/* Notify all registered callbacks */
-	ThemeCallback *cb;
-	for(cb = themestate.callbacks; cb != nil; cb = cb->next) {
-		if(cb->callback != nil)
-			cb->callback(cb->arg);
-	}
-
 	unlock(&themestate.l);
 
 	return 0;
+}
+
+/* Scan theme directories and build theme list using Inferno kernel ops */
+static int
+scandir_themes(char *buf, int n)
+{
+	int fd;
+	char path[128];
+	char *p = buf;
+	int left = n;
+	int len;
+	int found = 0;
+	Dir *dh;
+	long ndir;
+	int i, j;
+
+	/* Track seen themes to deduplicate */
+	static char seen[32][64];
+	static int nseen = 0;
+	int is_dup;
+
+	/* Reset state on each call to prevent stale data from previous calls */
+	nseen = 0;
+	memset(seen, 0, sizeof(seen));
+
+	/* Scan /usr/theme first (user themes), then /lib/theme (system themes) */
+	char *dirs[] = {"/usr/theme", "/lib/theme"};
+	int dir_idx;
+
+	for(dir_idx = 0; dir_idx < 2; dir_idx++) {
+		snprint(path, sizeof(path), "%s", dirs[dir_idx]);
+		fd = kopen(path, OREAD);
+		if(fd >= 0) {
+			/* Read all directory entries */
+			while((ndir = kdirread(fd, &dh)) > 0) {
+				for(i = 0; i < ndir; i++) {
+					/* Check if it's a .theme file */
+					len = strlen(dh[i].name);
+					if(len >= 6 && strcmp(&dh[i].name[len-6], ".theme") == 0) {
+						/* Check for duplicate */
+						is_dup = 0;
+						for(j = 0; j < nseen; j++) {
+							if(strcmp(seen[j], dh[i].name) == 0) {
+								is_dup = 1;
+								break;
+							}
+						}
+						if(!is_dup && nseen < 32) {
+							/* Store name without .theme suffix */
+							strncpy(seen[nseen], dh[i].name, len-6);
+							seen[nseen][len-6] = 0;
+							nseen++;
+						}
+					}
+				}
+				free(dh);
+			}
+			kclose(fd);
+		}
+	}
+
+	/* Build output buffer */
+	for(i = 0; i < nseen; i++) {
+		len = strlen(seen[i]);
+		if(left >= len + 2) {  /* name + \n + null */
+			strcpy(p, seen[i]);
+			p[len] = '\n';
+			p += len + 1;
+			left -= len + 1;
+			found = 1;
+		}
+	}
+
+	if(!found) {
+		/* Fallback if no themes found */
+		strcpy(buf, "default\ndark\n");
+		return strlen(buf);
+	}
+
+	*p = 0;
+	return p - buf;
 }
 
 static Chan*
@@ -341,21 +405,9 @@ themeread(Chan *c, void *buf, long n, vlong off)
 		return readstr(off, buf, n, themestate.current_theme);
 
 	case Qlist:
-		/* Hardcoded list of available themes */
-		return readstr(off, buf, n,
-			"amiga\n"
-			"classic\n"
-			"contrast\n"
-			"dark\n"
-			"default\n"
-			"dracula\n"
-			"gbc\n"
-			"haiku\n"
-			"nord\n"
-			"pink\n"
-			"ubuntu\n"
-			"win95\n"
-		);
+		if(off == 0)
+			return scandir_themes(buf, n);
+		return 0;
 
 	case Qevent:
 	{
@@ -396,8 +448,6 @@ themewrite(Chan *c, void *buf, long n, vlong off)
 	ulong path = c->qid.path;
 	ulong color;
 	char *p;
-	ThemeCallback *cb, **pcb;
-	void *ptr;
 
 	USED(off);
 
@@ -418,56 +468,6 @@ themewrite(Chan *c, void *buf, long n, vlong off)
 			return -1;  /* Error loading theme */
 		return n;  /* Success - return bytes written */
 
-	case Qregister:
-		/* Register callback: write contains [callback function, env pointer] */
-		{
-			void **buf = (void**)str;
-			void *callback = buf[0];
-			void *arg = buf[1];
-
-			lock(&themestate.l);
-			/* Check if already registered */
-			for(cb = themestate.callbacks; cb != nil; cb = cb->next) {
-				if(cb->arg == arg) {
-					unlock(&themestate.l);
-					return n;  /* Already registered */
-				}
-			}
-			/* Add new callback */
-			cb = malloc(sizeof(ThemeCallback));
-			if(cb == nil) {
-				unlock(&themestate.l);
-				return -1;
-			}
-			cb->callback = (void (*)(void*))callback;
-			cb->arg = arg;
-			cb->next = themestate.callbacks;
-			themestate.callbacks = cb;
-			unlock(&themestate.l);
-			return n;
-		}
-
-	case Qunregister:
-		/* Unregister callback: write contains pointer to TkEnv */
-		ptr = *(void**)str;
-		lock(&themestate.l);
-		pcb = &themestate.callbacks;
-		while(*pcb != nil) {
-			if((*pcb)->arg == ptr) {
-				cb = *pcb;
-				*pcb = cb->next;
-				free(cb);
-				break;
-			}
-			pcb = &(*pcb)->next;
-		}
-		unlock(&themestate.l);
-		return n;
-
-	case Qreload:
-		/* Trigger theme reload */
-		return n;
-
 	default:
 		/* Write color value */
 		if(path >= Qcolor0 && path <= Qcolor0 + NTHEMECOLORS - 1) {
@@ -483,13 +483,6 @@ themewrite(Chan *c, void *buf, long n, vlong off)
 				themestate.colors[idx].vers++;
 				themestate.version++;
 				Wakeup(&themestate.eventq);  /* Wake any blocked readers on Qevent */
-
-				/* Notify all registered callbacks */
-				ThemeCallback *cb;
-				for(cb = themestate.callbacks; cb != nil; cb = cb->next) {
-					if(cb->callback != nil)
-						cb->callback(cb->arg);
-				}
 
 				unlock(&themestate.l);
 				return n;
